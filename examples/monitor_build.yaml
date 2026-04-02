@@ -1,0 +1,55 @@
+# 循环监控场景示例
+# 持续监控构建状态，直到连续成功或达到最大轮次
+
+project_name: "RK3568 Build Monitor"
+project_path: "/home/zhengjian/rockchip/kernel"
+description: "持续监控内核构建状态"
+
+mode: loop  # 循环模式
+
+tasks:
+  - id: task_build
+    type: agent
+    description: "执行构建并检查结果"
+    prompt_template: |
+      在 {project_path} 目录下执行以下操作：
+
+      1. 清理之前的构建产物：
+         make clean
+
+      2. 执行全量构建：
+         make -j$(nproc)
+
+      3. 检查构建结果：
+         - 如果成功，记录成功信息
+         - 如果失败，记录错误信息
+
+      4. 检查是否有新的代码提交需要重新构建
+
+      返回详细的构建结果报告。
+    expected_output: "构建成功或失败，附带详细日志"
+
+loop_config:
+  task_id: task_build
+  max_rounds: 20  # 最多执行20轮
+  stop_condition: |
+    当构建成功连续3次时停止。
+    或者用户手动停止（通过 Ctrl+C）。
+  interval_seconds: 60  # 每轮之间休息60秒
+
+# 并行模式示例（注释掉）
+# mode: parallel
+# tasks:
+#   - id: task_1
+#     type: agent
+#     description: "编译驱动模块"
+#     prompt_template: |
+#       编译 media 目录下的所有驱动模块
+#     expected_output: "生成 .ko 文件"
+#
+#   - id: task_2
+#     type: agent
+#     description: "编译测试程序"
+#     prompt_template: |
+#       编译 tests 目录下的所有测试程序
+#     expected_output: "生成测试可执行文件"

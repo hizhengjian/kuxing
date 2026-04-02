@@ -1,0 +1,63 @@
+# Claude Code 源码全景分析 - 50轮任务
+# 对 src/ 下每个重点模块单独生成文档
+
+project_name: "Claude Code 源码全景分析 50轮"
+project_path: "/home/zhengjian/claudecode_projects/claude-code"
+description: "深入分析Claude Code源码的每个重点模块，使用文档方法论、图文并茂的方式生成完整文档"
+
+mode: loop  # 循环模式，让Claude自主决定每轮做什么
+
+tasks:
+  - id: task_analyze_and_plan
+    type: agent
+    description: "分析所有模块，规划50轮文档任务"
+    prompt_template: |
+      请分析 {project_path}/src/ 目录下的所有模块：
+
+      1. 列出所有子目录和主要文件
+      2. 识别37个模块中最重要的30-40个重点模块
+      3. 为每个重点模块规划要生成的文档内容：
+         - 模块名称和功能概述
+         - 核心数据结构
+         - 主要函数和流程
+         - 需要的图表类型
+
+      输出一个详细的50轮计划，每轮对应一个或多个模块的文档生成。
+
+      重要：输出格式要包含轮次规划，方便后续执行。
+    expected_output: "生成 docs/50-round-plan.md，包含50轮的详细规划"
+
+  - id: task_execute_round
+    type: agent
+    description: "执行单轮文档生成"
+    prompt_template: |
+      {context_summary}
+
+      ## 本轮任务
+
+      请根据上面的规划，执行当前轮次的文档生成任务。
+
+      要求：
+      1. 仔细阅读相关源码
+      2. 使用文档方法论（First Principles, 5W2H, STAR, Feynman）组织内容
+      3. 包含以下类型的图表：
+         - ASCII 图：架构图、流程图、状态机
+         - PlantUML 图：组件图、序列图（保存 .puml 源文件，生成 .svg 和 .png）
+         - draw.io 图：复杂系统设计（保存 .drawio 源文件，生成 .svg 和 .png）
+      4. 图表文件保存到 docs/images/ 目录
+      5. 文档用中文写，包含详细的代码注释和解释
+
+      每轮完成后，输出：
+      - 创建/更新的文档列表
+      - 生成的图表文件列表
+      - 下一轮建议（下一个要分析的模块）
+    expected_output: "生成/更新对应的文档，包含完整的图表"
+
+loop_config:
+  first_task_id: task_analyze_and_plan  # 第一轮执行规划任务
+  task_id: task_execute_round  # 后续轮次执行文档生成
+  max_rounds: 50  # 50轮
+  stop_condition: |
+    当完成所有重要模块的文档后停止。
+    或者当用户手动中断（Ctrl+C）时停止。
+  interval_seconds: 30  # 每轮之间休息30秒

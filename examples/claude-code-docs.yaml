@@ -1,0 +1,99 @@
+# Claude Code 源码分析文档生成
+# 使用文档方法论，图文并茂地全面解释代码
+
+project_name: "Claude Code 源码全景分析"
+project_path: "/home/zhengjian/claudecode_projects/claude-code"
+description: "深入分析Claude Code源码，生成全面细致的文档，使用文档方法论、图文并茂的方式解释代码架构和实现细节"
+
+mode: serial  # 串行执行，确保依赖顺序
+
+tasks:
+  - id: task_analyze_round1
+    type: agent
+    description: "Round 1: 分析代码结构，识别关键模块和已有文档"
+    prompt_template: |
+      请仔细分析 {project_path} 目录下的 Claude Code 源码：
+
+      1. 列出 src/ 目录下所有主要模块及其功能
+      2. 查看 docs/ 目录下已有的文档（00-summary.md, 01-overview.md 等）
+      3. 了解每个文档覆盖了哪些内容，还缺什么
+
+      输出：
+      - src/ 目录结构概览（主要模块列表）
+      - 已有的文档列表及其覆盖的内容
+      - 识别出还需要补充的重要主题
+    expected_output: "生成 docs/analysis/round1_analysis.md，包含代码结构分析和已有文档缺漏分析"
+
+  - id: task_doc_round1
+    type: agent
+    description: "Round 1: 基于分析结果，生成或完善核心文档"
+    depends_on: [task_analyze_round1]
+    prompt_template: |
+      根据 round1_analysis.md 的分析结果：
+
+      1. 选择最重要的2-3个主题进行深入文档编写
+      2. 使用文档方法论（First Principles, 5W2H, STAR等）来组织内容
+      3. 每篇文档要包含：
+         - ASCII 图（架构图、流程图、状态机）
+         - PlantUML 图（生成 .puml 源文件，渲染 .svg 和 .png）
+         - 代码示例和注释
+         - 中文详细解释
+
+      重点主题建议：
+      - 任务执行系统（Task System）
+      - 内存目录系统（Memory Directory）
+      - 多Agent协作（Multi-Agent）
+      - MCP集成（Model Context Protocol）
+
+      完成后输出：
+      - 创建/修改的文档列表
+      - 生成的图表文件列表
+    expected_output: "生成/更新 2-3 篇核心文档，包含图表，保存在 docs/ 目录下"
+
+  - id: task_analyze_round2
+    type: agent
+    description: "Round 2: 分析 Round 1 完成的文档，规划剩余工作"
+    depends_on: [task_doc_round1]
+    prompt_template: |
+      查看 docs/ 目录下 Round 1 生成的文档：
+
+      1. 列出所有已完成的文档
+      2. 检查每个文档中：
+         - 图表是否完整（ASCII + PlantUML + draw.io）
+         - 内容是否详尽
+         - 是否包含代码示例
+      3. 列出还缺少图表的重要文档
+
+      输出：
+      - 已完成文档清单
+      - 缺少图表的文档列表
+      - Round 2 建议优先补充的主题
+    expected_output: "生成 docs/analysis/round2_plan.md，Round 2 的补充计划"
+
+  - id: task_doc_round2
+    type: agent
+    description: "Round 2: 补充缺失的图表，完善已有文档"
+    depends_on: [task_analyze_round2]
+    prompt_template: |
+      根据 round2_plan.md 的规划：
+
+      1. 为缺少图表的文档补充：
+         - ASCII 流程图/架构图
+         - PlantUML 组件图/序列图（生成 .puml，渲染 .svg）
+         - draw.io 图表（如果需要更复杂的图）
+
+      2. 确保每个重要文档都包含：
+         - 至少 1 个 ASCII 图
+         - 至少 1 个 PlantUML 图
+         - 详细的代码示例
+
+      3. 图表文件要求：
+         - PlantUML 源文件: docs/images/*.puml
+         - SVG 输出: docs/images/*.svg
+         - PNG 输出: docs/images/*.png
+
+      完成后输出：
+      - 补充的图表文件列表
+      - 更新的文档列表
+      - 最终文档清单
+    expected_output: "所有重要文档都包含完整的图表说明"
