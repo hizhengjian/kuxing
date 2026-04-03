@@ -60,6 +60,15 @@ def cmd_init(args):
 def cmd_run(args):
     """开始执行任务"""
     base_path = Path(__file__).parent
+    config_path = os.path.abspath(args.config) if args.config else find_config(base_path)
+
+    # 重新拷贝配置文件到 memory 目录（每次运行都用最新的配置）
+    config = load_config(config_path)
+    memory_store = MemoryStore(str(base_path), config.project_slug)
+    memory_store.ensure_dirs()
+    import shutil
+    shutil.copy(config_path, memory_store.get_config_path())
+    print(f"已更新配置: {memory_store.get_config_path()}")
 
     # 检查Claude可用性
     if not check_claude_available():
@@ -68,7 +77,7 @@ def cmd_run(args):
     try:
         scheduler = Scheduler(
             base_path=str(base_path),
-            config_path=args.config or find_config(base_path),
+            config_path=config_path,
             dry_run=args.dry_run
         )
 

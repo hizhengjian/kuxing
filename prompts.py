@@ -88,11 +88,7 @@ next_hints: |
         if depends_on_completed:
             deps_note = f"\n\n### 依赖任务完成情况\n已完成的依赖任务: {', '.join(depends_on_completed)}\n"
 
-        return f"""{deps_note}
-
-## 本轮任务
-
-### 任务描述
+        return f"""### 任务描述
 {task_description}
 
 ### 预期输出

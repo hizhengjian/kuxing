@@ -26,7 +26,7 @@ class ClaudeInvoker:
         self,
         claude_path: str = "claude",
         model: str = "sonnet-4-20250514",
-        timeout_seconds: int = 600
+        timeout_seconds: int = 5400  # 90分钟，复杂文档生成任务需要较长时间
     ):
         """
         初始化调用器
@@ -74,9 +74,21 @@ class ClaudeInvoker:
             try:
                 start_time = time.time()
 
+                # 第2次起尝试用 --resume 继续执行（之前的任务可能未完成）
+                use_resume = resume or attempt > 0
+
+                # 构建命令
+                invoke_cmd = [self.claude_path, "-p", prompt, "--dangerously-skip-permissions"]
+                if use_resume:
+                    invoke_cmd.append("--resume")
+                    print(f"使用 --resume 模式继续执行...")
+
+                print(f"执行命令: {' '.join(invoke_cmd[:3])}...")
+                print(f"Prompt长度: {len(prompt)} 字符, 超时: {self.timeout_seconds}秒")
+
                 # 执行命令
                 result = subprocess.run(
-                    cmd,
+                    invoke_cmd,
                     capture_output=True,
                     text=True,
                     timeout=self.timeout_seconds,
@@ -119,8 +131,8 @@ class ClaudeInvoker:
 
             except subprocess.TimeoutExpired:
                 last_error = f"调用超时 ({self.timeout_seconds}秒)"
-                print(f"调用超时 (尝试 {attempt + 1}/{max_retries})")
-                time.sleep(2 ** attempt)
+                print(f"调用超时 (尝试 {attempt + 1}/{max_retries})，将使用 --resume 继续...")
+                time.sleep(5)  # 等待5秒让Claude完成写入
 
             except Exception as e:
                 last_error = f"调用异常: {str(e)}"

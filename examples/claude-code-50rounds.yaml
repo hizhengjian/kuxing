@@ -57,7 +57,5 @@ loop_config:
   first_task_id: task_analyze_and_plan  # 第一轮执行规划任务
   task_id: task_execute_round  # 后续轮次执行文档生成
   max_rounds: 50  # 50轮
-  stop_condition: |
-    当完成所有重要模块的文档后停止。
-    或者当用户手动中断（Ctrl+C）时停止。
+  stop_condition: ""  # 留空则不自动停止，直到达到max_rounds
   interval_seconds: 30  # 每轮之间休息30秒

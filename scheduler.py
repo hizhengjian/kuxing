@@ -391,7 +391,7 @@ class Scheduler:
         循环模式执行
 
         Args:
-            max_rounds: 最大轮次限制
+            max_rounds: 最大轮次限制（不含first_task）
 
         Returns:
             执行摘要字典
@@ -407,8 +407,89 @@ class Scheduler:
 
         start_time = time.time()
         consecutive_success = 0
-        stop_requested = False
 
+        # 先执行 first_task（如果配置了且还没执行过）
+        first_task_id = getattr(self.config.loop_config, 'first_task_id', None)
+        if first_task_id and self.state.current_round == 0:
+            self.logger.info(f"\n执行首轮任务: {first_task_id}")
+            # 直接执行首轮任务，不通过队列
+            task = self.state.tasks.get(first_task_id)
+            if task:
+                task.status = "running"
+                self.state.current_round += 1
+                round_num = self.state.current_round
+                self._log_round_start(round_num, task.description)
+
+                # 构建prompt（首轮任务不使用context_summary）
+                prompt = self._build_first_task_prompt(task)
+                self._log_prompt(prompt, round_num)
+
+                # 执行
+                invoke_result = self.claude_invoker.invoke(
+                    prompt=prompt,
+                    project_path=self.state.project_path
+                )
+
+                if invoke_result.success:
+                    result_dict = extract_result_from_output(invoke_result.output)
+                    result_dict['status'] = 'completed'
+                    result_dict['raw_output'] = invoke_result.output
+                    invocation_dict = None
+                    if invoke_result.invocation:
+                        invocation_dict = {
+                            'prompt': invoke_result.invocation.prompt[:500],
+                            'model': invoke_result.invocation.model,
+                            'input_tokens': invoke_result.invocation.input_tokens,
+                            'output_tokens': invoke_result.invocation.output_tokens,
+                            'duration_ms': invoke_result.invocation.duration_ms
+                        }
+                    self.logger.info(f"[Round {round_num}] Claude调用成功 | model: {invoke_result.invocation.model}")
+                else:
+                    result_dict = {
+                        'status': 'failed',
+                        'files_modified': [],
+                        'files_created': [],
+                        'summary': f'执行失败: {invoke_result.error}',
+                        'next_hints': '请检查错误并重试'
+                    }
+                    invocation_dict = None
+                    self._log_error(invoke_result.error or "Unknown error", round_num)
+
+                # 更新状态
+                task.status = result_dict.get('status', 'completed')
+                task.round_completed = round_num
+                self.state.completed_rounds.append(round_num)
+
+                # 保存轮次记忆
+                round_state = RoundState(
+                    round=round_num,
+                    timestamp=datetime.now().isoformat(),
+                    task_id=first_task_id,
+                    task_description=task.description,
+                    input_context={
+                        'project_path': self.state.project_path,
+                        'previous_round_summary': result_dict.get('summary', ''),
+                        'depends_on_completed': []
+                    },
+                    claude_invocation=invocation_dict,
+                    result=result_dict
+                )
+                self.memory_store.save_round(round_state)
+                self._log_result(result_dict, round_num)
+
+                if result_dict.get('status') == 'completed':
+                    consecutive_success = 1
+
+        # 解析停止条件中的数字
+        stop_n = float('inf')  # 默认不停止（直到达到max_rounds）
+        import re
+        stop_cond = self.config.loop_config.stop_condition
+        if stop_cond:  # 只有非空时才解析
+            match = re.search(r'连续(\d+)次成功', stop_cond)
+            if match:
+                stop_n = int(match.group(1))
+
+        # 主循环
         while self.queue.should_continue(self.state):
             if self.state.current_round >= max_rounds:
                 self.logger.info(f"\n达到最大轮次限制 ({max_rounds})，停止")
@@ -422,11 +503,10 @@ class Scheduler:
             else:
                 consecutive_success = 0
 
-            # 检查停止条件（循环队列内部已处理，这里只记录）
-            if self.config.loop_config.stop_condition and "连续" in self.config.loop_config.stop_condition:
-                if consecutive_success >= 3:
-                    self.logger.info("\n达成停止条件：连续3次成功，停止循环")
-                    break
+            # 检查停止条件
+            if consecutive_success >= stop_n:
+                self.logger.info(f"\n达成停止条件：连续{stop_n}次成功，停止循环")
+                break
 
         elapsed = time.time() - start_time
 
@@ -440,6 +520,27 @@ class Scheduler:
         self.logger.info(f"\n循环执行结束，共 {self.state.current_round} 轮，耗时 {elapsed:.1f}秒")
 
         return summary
+
+    def _build_first_task_prompt(self, task) -> str:
+        """为首轮任务构建prompt（不使用context_summary）"""
+        # 格式化prompt_template中的变量
+        prompt = task.prompt_template.format(project_path=self.state.project_path)
+        return f"""## 本轮任务
+
+### 任务描述
+{task.description}
+
+### 预期输出
+{task.expected_output}
+
+### 执行 Prompt
+{prompt}
+
+## 执行要求
+1. 按照 prompt 执行任务
+2. 确保达到 expected_output 的验收标准
+3. 完成后用 <result> 标签返回结构化结果
+"""
 
     def get_status(self) -> dict:
         """获取当前状态摘要"""
