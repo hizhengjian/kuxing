@@ -60,7 +60,8 @@ next_hints: |
         expected_output: str,
         context_summary: str,
         depends_on_completed: list,
-        project_path: str
+        project_path: str,
+        full_context: str = ""
     ) -> str:
         """
         构建单轮任务的提示词
@@ -72,6 +73,7 @@ next_hints: |
             context_summary: 历史上下文摘要
             depends_on_completed: 已完成的依赖任务列表
             project_path: 项目路径
+            full_context: 完整上下文（全局+项目+知识沉淀）
 
         Returns:
             格式化后的完整提示词
@@ -88,12 +90,17 @@ next_hints: |
         if depends_on_completed:
             deps_note = f"\n\n### 依赖任务完成情况\n已完成的依赖任务: {', '.join(depends_on_completed)}\n"
 
+        # 构造完整上下文说明
+        context_note = ""
+        if full_context:
+            context_note = f"\n\n### 项目上下文（重要，请务必参考）\n{full_context}\n"
+
         return f"""### 任务描述
 {task_description}
 
 ### 预期输出
 {expected_output}
-
+{context_note}
 ### 执行 Prompt
 {prompt}
 
@@ -161,7 +168,8 @@ next_hints: |
 def build_task_prompt(
     state: SchedulerState,
     task_id: str,
-    context_summary: str
+    context_summary: str,
+    full_context: str = ""
 ) -> str:
     """
     为指定任务构建完整的prompt
@@ -170,6 +178,7 @@ def build_task_prompt(
         state: 调度器状态
         task_id: 任务ID
         context_summary: 历史上下文摘要
+        full_context: 完整上下文（全局+项目+知识沉淀）
 
     Returns:
         完整的提示词字符串
@@ -196,7 +205,8 @@ def build_task_prompt(
         expected_output=task.expected_output,
         context_summary=context_summary,
         depends_on_completed=completed_deps,
-        project_path=state.project_path
+        project_path=state.project_path,
+        full_context=full_context
     )
 
 
@@ -296,9 +306,9 @@ def extract_result_from_output(output: str) -> dict:
 
     # 解析 summary（支持多种格式）
     for pattern in [
-        r'summary:\s*\|?\s*\n((?:.+\n)*?)(?=\n\s*(?:next_hints|---)|$)',
-        r'summary:\s*:\s*\n((?:.+\n)*)',
-        r'摘要:\s*\n((?:.+\n)*)',
+        r'summary:\s*\|\s*\n((?:(?!next_hints|files_created|files_modified).+\n)*)',
+        r'summary:\s*\n((?:(?!next_hints|files_created|files_modified).+\n)*)',
+        r'摘要:\s*\n((?:(?!next_hints|下一轮).+\n)*)',
     ]:
         match = re.search(pattern, content, re.IGNORECASE)
         if match:
@@ -316,11 +326,11 @@ def extract_result_from_output(output: str) -> dict:
 
     # 解析 next_hints
     for pattern in [
-        r'next_hints:\s*\|?\s*\n((?:.+\n)*?)(?=\n\s*(?:---|files|$))',
-        r'next_hints:\s*:\s*\n((?:.+\n)*)',
-        r'下一轮:\s*\n((?:.+\n)*)',
+        r'next_hints:\s*\|\s*\n((?:(?!---|files|summary).+\n)*)',
+        r'next_hints:\s*\n\s*(.+?)(?=\n\w+:|</result>|\Z)',
+        r'下一轮:\s*\n((?:(?!---).+\n)*)',
     ]:
-        match = re.search(pattern, content, re.IGNORECASE)
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
         if match:
             next_text = match.group(1).strip()
             if next_text:

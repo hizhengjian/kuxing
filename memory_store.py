@@ -3,6 +3,7 @@
 """
 import json
 import os
+import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -18,17 +19,24 @@ class MemoryStore:
         初始化记忆存储
 
         Args:
-            base_path: 基础路径，如 ~/claudecode_projects/kuxing僧
+            base_path: 基础路径，如 ~/claudecode_projects/kuxing
             project_slug: 项目标识符，用于创建子目录
         """
         self.base_path = Path(base_path)
         self.project_slug = project_slug
         self.memory_dir = self.base_path / "memory" / project_slug
         self.rounds_dir = self.memory_dir / "rounds"
+        self.context_file = self.memory_dir / "context.md"
+        self.knowledge_base_file = self.memory_dir / "knowledge_base.md"
+        # 全局共享记忆目录（改为项目内路径，便于迁移）
+        self.shared_context_dir = self.base_path / "shared_context"
+        self.shared_context_file = self.shared_context_dir / "context.md"
 
     def ensure_dirs(self):
         """确保目录结构存在"""
         self.rounds_dir.mkdir(parents=True, exist_ok=True)
+        # 确保全局共享目录存在
+        self.shared_context_dir.mkdir(parents=True, exist_ok=True)
 
     def get_config_path(self) -> Path:
         """获取配置文件路径"""
@@ -203,3 +211,234 @@ class MemoryStore:
             "last_activity": rounds[-1].timestamp if rounds else None,
             "last_error": state.last_error
         }
+
+    # ==================== 记忆管理层 ====================
+
+    def load_shared_context(self) -> str:
+        """
+        加载全局共享记忆（shared_context/context.md）
+
+        Returns:
+            全局共享记忆内容，如果不存在返回空字符串
+        """
+        if self.shared_context_file.exists():
+            try:
+                with open(self.shared_context_file, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                return self.resolve_env_vars(content)
+            except Exception as e:
+                print(f"警告: 读取全局共享记忆失败 {self.shared_context_file}: {e}")
+                return ""
+        return ""
+
+    def load_project_context(self) -> str:
+        """
+        加载项目私有记忆（memory/{project}/context.md）
+
+        Returns:
+            项目私有记忆内容，如果不存在返回空字符串
+        """
+        if self.context_file.exists():
+            try:
+                with open(self.context_file, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                return self.resolve_env_vars(content)
+            except Exception as e:
+                print(f"警告: 读取项目记忆失败 {self.context_file}: {e}")
+                return ""
+        return ""
+
+    def load_knowledge_base(self) -> str:
+        """
+        加载知识沉淀（memory/{project}/knowledge_base.md）
+
+        Returns:
+            知识沉淀内容，如果不存在返回空字符串
+        """
+        if self.knowledge_base_file.exists():
+            try:
+                with open(self.knowledge_base_file, 'r', encoding='utf-8') as f:
+                    return f.read().strip()
+            except Exception as e:
+                print(f"警告: 读取知识沉淀失败 {self.knowledge_base_file}: {e}")
+                return ""
+        return ""
+
+    def append_knowledge_base(self, new_content: str) -> None:
+        """
+        追加知识到沉淀文件
+
+        Args:
+            new_content: 新增的知识内容
+        """
+        if not new_content.strip():
+            return
+
+        self.ensure_dirs()
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 如果文件不存在，创建头部
+        header = f"# 知识沉淀\n\n最后更新: {timestamp}\n\n"
+        separator = "\n" + "=" * 40 + "\n"
+
+        new_entry = f"## 更新 {timestamp}\n{new_content.strip()}\n"
+
+        if self.knowledge_base_file.exists():
+            # 追加到现有文件
+            with open(self.knowledge_base_file, 'a', encoding='utf-8') as f:
+                f.write(separator + new_entry)
+        else:
+            # 创建新文件
+            with open(self.knowledge_base_file, 'w', encoding='utf-8') as f:
+                f.write(header + new_entry)
+
+    def append_project_context(self, new_content: str) -> None:
+        """
+        追加内容到项目记忆文件
+
+        Args:
+            new_content: 新增的内容
+        """
+        if not new_content.strip():
+            return
+
+        self.ensure_dirs()
+
+        # 追加到现有文件
+        with open(self.context_file, 'a', encoding='utf-8') as f:
+            f.write(new_content)
+
+    def resolve_env_vars(self, content: str) -> str:
+        """
+        替换内容中的 ${VAR_NAME} 为环境变量值
+
+        Args:
+            content: 原始内容
+
+        Returns:
+            替换环境变量后的内容
+        """
+        if not content:
+            return content
+
+        # 匹配 ${VAR_NAME} 模式
+        pattern = r'\$\{([^}]+)\}'
+        undefined_vars = []
+
+        def replace_var(match):
+            var_name = match.group(1)
+            value = os.environ.get(var_name)
+            if value is not None:
+                return value
+            # 环境变量不存在，记录并保留原样
+            undefined_vars.append(var_name)
+            return f"${{{var_name}}}"
+
+        result = re.sub(pattern, replace_var, content)
+
+        # 警告未定义的变量
+        if undefined_vars:
+            unique_vars = sorted(set(undefined_vars))
+            print(f"⚠️  警告: 以下环境变量未定义: {', '.join(unique_vars)}")
+
+        return result
+
+    def get_full_context(self) -> str:
+        """
+        获取完整的上下文记忆（按优先级合并）
+
+        优先级（高到低）：
+        1. 项目私有记忆 (context.md)
+        2. 全局共享记忆 (shared/context.md)
+        3. 知识沉淀 (knowledge_base.md)
+
+        Returns:
+            格式化后的完整上下文
+        """
+        parts = []
+
+        # 知识沉淀（最低优先级，但每轮都应参考）
+        kb = self.load_knowledge_base()
+        if kb:
+            parts.append("## 历史知识沉淀\n请参考以下历史发现：\n" + kb)
+
+        # 全局共享记忆
+        shared = self.load_shared_context()
+        if shared:
+            parts.append("## 全局公共记忆\n" + shared)
+
+        # 项目私有记忆（最高优先级）
+        project = self.load_project_context()
+        if project:
+            parts.append("## 项目私有记忆\n" + project)
+
+        if not parts:
+            return ""
+
+        return "\n\n---\n\n".join(parts)
+
+    def create_context_template(self) -> str:
+        """
+        创建项目 context.md 模板（如果不存在）
+
+        Returns:
+            模板文件路径
+        """
+        self.ensure_dirs()
+
+        if not self.context_file.exists():
+            template = """# 项目私有记忆
+
+## SDK 路径
+- SDK路径: ${SDK_PATH}
+
+## 参考文件
+- 参考文档: /path/to/doc.md
+
+## 账号配置（使用 ${VAR_NAME} 引用环境变量）
+- 服务地址: ${SERVICE_URL}
+
+## 项目特定信息
+- 项目特性1: xxx
+- 项目特性2: xxx
+
+## 已知问题
+- 模块A有bug，需要特殊处理
+
+"""
+            with open(self.context_file, 'w', encoding='utf-8') as f:
+                f.write(template)
+            return str(self.context_file)
+        return ""
+
+    def create_shared_context_template(self) -> str:
+        """
+        创建全局 shared_context/context.md 模板（如果不存在）
+
+        Returns:
+            模板文件路径
+        """
+        self.shared_context_dir.mkdir(parents=True, exist_ok=True)
+
+        if not self.shared_context_file.exists():
+            template = """# 全局公共记忆
+
+## SDK 路径
+- Android SDK: ${ANDROID_SDK_HOME}
+- NDK: ${ANDROID_NDK_HOME}
+- Python: /usr/bin/python3
+
+## 常用参考文档
+- API规范: /docs/api-spec.yaml
+- 设计文档: /docs/design.md
+
+## 账号配置（使用 ${VAR_NAME} 引用环境变量）
+- Harbor: ${HARBOR_USERNAME}
+- GitLab: ${GITLAB_TOKEN}
+
+"""
+            with open(self.shared_context_file, 'w', encoding='utf-8') as f:
+                f.write(template)
+            return str(self.shared_context_file)
+        return ""

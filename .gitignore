@@ -1,13 +1,23 @@
 __pycache__/
 *.pyc
 *.pyo
+*.py[cod]
+*$py.class
 *.egg-info/
 dist/
 build/
 .eggs/
 
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
 # 运行时生成的记忆目录（不需要提交）
 memory/
+shared_context/
+parallel_logs/
 
 # IDE
 .idea/
@@ -15,6 +25,11 @@ memory/
 *.swp
 *.swo
 *~
+
+# 环境
+.env
+venv/
+env/
 
 # 日志文件
 *.log

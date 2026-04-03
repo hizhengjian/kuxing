@@ -6,14 +6,44 @@ import argparse
 import sys
 import os
 from pathlib import Path
+from datetime import datetime
 
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent))
+
+
+def check_dependencies():
+    """检查依赖是否满足"""
+    errors = []
+
+    # 检查 Python 版本
+    if sys.version_info < (3, 8):
+        errors.append(f"Python 版本过低: {sys.version_info.major}.{sys.version_info.minor}，需要 Python 3.8+")
+
+    # 检查 pyyaml
+    try:
+        import yaml
+    except ImportError:
+        errors.append("缺少 pyyaml 库，请运行: pip install pyyaml")
+
+    if errors:
+        print("错误: 依赖检查失败")
+        for err in errors:
+            print(f"  - {err}")
+        print()
+        print("安装依赖:")
+        print("  pip install -r requirements.txt")
+        sys.exit(1)
+
+
+# 启动时检查依赖
+check_dependencies()
 
 from scheduler import Scheduler, run_from_config
 from memory_store import MemoryStore
 from config_schema import load_config
 from claude_invoker import check_claude_available, get_claude_version
+import yaml
 
 
 def cmd_init(args):
@@ -53,6 +83,92 @@ def cmd_init(args):
 
     print(f"\n记忆目录: {memory_store.memory_dir}")
     print("初始化完成！")
+
+    return 0
+
+
+def cmd_init_context(args):
+    """初始化记忆模板"""
+    base_path = Path(__file__).parent
+
+    # 获取全局共享记忆模板
+    if args.global_context:
+        memory_store = MemoryStore(str(base_path), "temp")
+        shared_path = memory_store.shared_context_file
+
+        if shared_path.exists():
+            print(f"全局共享记忆已存在: {shared_path}")
+            if not args.force:
+                print("使用 --force 覆盖")
+                return 1
+
+        template = """# 全局公共记忆
+
+## SDK 路径
+- Android SDK: ${ANDROID_SDK_HOME}
+- NDK: ${ANDROID_NDK_HOME}
+- Python: /usr/bin/python3
+
+## 常用参考文档
+- API规范: /docs/api-spec.yaml
+- 设计文档: /docs/design.md
+
+## 账号配置（使用 ${VAR_NAME} 引用环境变量）
+- Harbor: ${HARBOR_USERNAME}
+- GitLab: ${GITLAB_TOKEN}
+
+"""
+        memory_store.shared_context_dir.mkdir(parents=True, exist_ok=True)
+        with open(shared_path, 'w', encoding='utf-8') as f:
+            f.write(template)
+        print(f"已创建全局共享记忆: {shared_path}")
+        print("提示: 编辑此文件添加你的 SDK 路径、参考文件、账号配置等")
+        print("      使用 ${VAR_NAME} 语法引用环境变量")
+
+    # 获取项目记忆模板
+    if args.project_context or not args.global_context:
+        config_path = args.config or find_config(base_path)
+        try:
+            config = load_config(config_path)
+        except Exception as e:
+            print(f"错误: 无法加载配置 - {e}")
+            return 1
+
+        memory_store = MemoryStore(str(base_path), config.project_slug)
+        memory_store.ensure_dirs()
+
+        context_file = memory_store.context_file
+        if context_file.exists():
+            print(f"项目记忆已存在: {context_file}")
+            if not args.force:
+                print("使用 --force 覆盖")
+                return 1
+
+        template = f"""# 项目私有记忆
+
+## 项目: {config.project_name}
+
+## SDK 路径
+- SDK路径: ${SDK_PATH}
+
+## 参考文件
+- 参考文档: /path/to/doc.md
+
+## 账号配置（使用 ${VAR_NAME} 引用环境变量）
+- 服务地址: ${SERVICE_URL}
+
+## 项目特定信息
+- 项目特性1: xxx
+- 项目特性2: xxx
+
+## 已知问题
+- 模块A有bug，需要特殊处理
+
+"""
+        with open(context_file, 'w', encoding='utf-8') as f:
+            f.write(template)
+        print(f"已创建项目记忆: {context_file}")
+        print("提示: 编辑此文件添加你的项目特定信息")
 
     return 0
 
@@ -168,6 +284,146 @@ def cmd_reset(args):
         return 1
 
 
+def cmd_parallel(args):
+    """并行执行多个项目"""
+    import subprocess
+    import threading
+    import time
+
+    base_path = Path(__file__).parent
+
+    if not args.configs:
+        # 如果没指定配置，查找 examples 目录下所有配置
+        examples_dir = base_path / "examples"
+        if examples_dir.exists():
+            configs = list(examples_dir.glob("*.yaml"))
+        else:
+            print("错误: 未找到配置文件，请使用 --config 指定")
+            return 1
+    else:
+        configs = [Path(c) for c in args.configs]
+
+    if len(configs) == 0:
+        print("错误: 未找到任何配置文件")
+        return 1
+
+    print(f"=" * 60)
+    print(f"并行执行 {len(configs)} 个项目")
+    print(f"=" * 60)
+
+    processes = []
+    for cfg in configs:
+        if not cfg.exists():
+            print(f"警告: 配置文件不存在 - {cfg}")
+            continue
+
+        # 加载配置获取项目名
+        try:
+            config = load_config(str(cfg))
+            project_name = config.project_name
+        except Exception as e:
+            project_name = cfg.stem
+            print(f"警告: 无法加载配置 {cfg}: {e}")
+
+        print(f"  [{len(processes)+1}] {project_name} ({cfg})")
+
+    print(f"\n每个项目使用独立的记忆空间，互不干扰。")
+    print(f"按 Ctrl+C 停止所有项目。")
+    print(f"=" * 60)
+
+    # 启动每个项目的run进程
+    for cfg in configs:
+        if not cfg.exists():
+            continue
+
+        config_path = str(cfg.absolute())
+
+        # 使用 subprocess 启动独立进程
+        # --loop 标志让任务持续运行
+        cmd = [
+            sys.executable,
+            str(base_path / "cli.py"),
+            "run",
+            "--config", config_path
+        ]
+        if args.loop:
+            cmd.append("--loop")
+
+        print(f"\n启动进程: {Path(cfg).stem}")
+        print(f"  命令: {' '.join(cmd)}")
+
+        # 启动进程，重定向输出到文件
+        log_dir = base_path / "parallel_logs"
+        log_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = log_dir / f"{Path(cfg).stem}_{timestamp}.log"
+
+        with open(log_file, 'w') as f:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                cwd=str(base_path)
+            )
+
+        processes.append({
+            'config': str(cfg),
+            'process': proc,
+            'log': str(log_file),
+            'name': Path(cfg).stem
+        })
+
+        print(f"  日志: {log_file}")
+        print(f"  PID: {proc.pid}")
+
+    if not processes:
+        print("错误: 没有成功启动任何项目")
+        return 1
+
+    print(f"\n{'=' * 60}")
+    print(f"已启动 {len(processes)} 个项目")
+    print(f"查看日志: tail -f {log_dir}/<项目名>_*.log")
+    print(f"{'=' * 60}")
+
+    # 监控进程状态
+    try:
+        while True:
+            time.sleep(30)  # 每30秒检查一次
+
+            all_stopped = True
+            for p in processes:
+                if p['process'].poll() is None:
+                    all_stopped = False
+                else:
+                    exit_code = p['process'].poll()
+                    print(f"\n[!] 项目 {p['name']} 已结束 (退出码: {exit_code})")
+                    print(f"    日志: {p['log']}")
+
+            if all_stopped:
+                print("\n所有项目已结束")
+                break
+
+            # 显示状态
+            running = sum(1 for p in processes if p['process'].poll() is None)
+            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 运行中: {running}/{len(processes)}", end='\r')
+
+    except KeyboardInterrupt:
+        print("\n\n检测到 Ctrl+C，停止所有项目...")
+        for p in processes:
+            if p['process'].poll() is None:
+                print(f"  停止 {p['name']} (PID: {p['process'].pid})...")
+                p['process'].terminate()
+                try:
+                    p['process'].wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    p['process'].kill()
+
+        print("所有项目已停止")
+        return 130
+
+    return 0
+
+
 def cmd_show(args):
     """显示历史记录"""
     base_path = Path(__file__).parent
@@ -219,6 +475,160 @@ def cmd_show(args):
         import traceback
         traceback.print_exc()
         return 1
+
+
+def cmd_create_task(args):
+    """创建新任务（包含配置和记忆）"""
+    base_path = Path(__file__).parent
+    project_name = args.project_name
+
+    print(f"🤖 创建任务: {project_name}")
+    print("=" * 50)
+
+    # 收集信息
+    code_paths = []
+    print("\n📂 代码路径（每行一个，输入空行结束）:")
+    while True:
+        path = input("  路径: ").strip()
+        if not path:
+            break
+        code_paths.append(path)
+
+    doc_paths = []
+    print("\n📄 文档路径（每行一个，输入空行结束）:")
+    while True:
+        path = input("  路径: ").strip()
+        if not path:
+            break
+        doc_paths.append(path)
+
+    description = input("\n📝 项目描述（可选）: ").strip()
+
+    # 账号信息
+    has_credentials = input("\n🔐 是否需要保存账号信息？(y/n): ").lower() == 'y'
+    credentials = []
+    if has_credentials:
+        print("账号信息（格式：服务名 账号 密码，每行一个，输入空行结束）:")
+        while True:
+            cred = input("  ").strip()
+            if not cred:
+                break
+            credentials.append(cred)
+
+    # 偏好设置
+    preferences = []
+    has_preferences = input("\n⚙️  是否需要保存偏好设置？(y/n): ").lower() == 'y'
+    if has_preferences:
+        print("偏好设置（每行一个，输入空行结束）:")
+        while True:
+            pref = input("  ").strip()
+            if not pref:
+                break
+            preferences.append(pref)
+
+    # 任务配置
+    max_rounds_input = input("\n🔄 最大轮次（默认50）: ").strip()
+    max_rounds = int(max_rounds_input) if max_rounds_input else 50
+
+    print("\n🔄 正在生成配置和记忆文件...")
+
+    # 生成配置文件
+    project_slug = project_name.lower().replace(' ', '-').replace('_', '-')
+
+    config = {
+        'project_name': project_name,
+        'project_path': code_paths[0] if code_paths else '.',
+        'mode': 'loop',
+        'tasks': [
+            {
+                'id': 'task_analyze',
+                'description': f'分析 {project_name}',
+                'prompt_template': '{context_summary}\n\n分析代码结构，生成文档。',
+                'expected_output': '生成分析文档'
+            }
+        ],
+        'loop_config': {
+            'task_id': 'task_analyze',
+            'max_rounds': max_rounds
+        }
+    }
+
+    config_file = base_path / 'examples' / f'{project_slug}.yaml'
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(config_file, 'w', encoding='utf-8') as f:
+        yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+
+    print(f"\n✅ 已生成配置: {config_file}")
+
+    # 生成项目记忆
+    project_context = f"""# {project_name} 项目记忆
+
+## 代码路径
+"""
+    if code_paths:
+        project_context += "\n".join(f"- {p}" for p in code_paths)
+    else:
+        project_context += "- （暂无）"
+
+    project_context += "\n\n## 文档路径\n"
+    if doc_paths:
+        project_context += "\n".join(f"- {p}" for p in doc_paths)
+    else:
+        project_context += "- （暂无）"
+
+    if description:
+        project_context += f"\n\n## 项目描述\n{description}\n"
+
+    project_context += f"\n\n## 创建时间\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+
+    memory_store = MemoryStore(str(base_path), project_slug)
+    memory_store.ensure_dirs()
+
+    project_context_file = memory_store.project_dir / "context.md"
+    project_context_file.parent.mkdir(parents=True, exist_ok=True)
+    project_context_file.write_text(project_context, encoding='utf-8')
+
+    print(f"✅ 已生成项目记忆: {project_context_file}")
+
+    # 生成全局记忆
+    if credentials or preferences:
+        shared_context = """# 全局共享记忆
+
+## 账号配置
+"""
+        if credentials:
+            shared_context += "\n".join(f"- {c}" for c in credentials)
+        else:
+            shared_context += "- （暂无）"
+
+        shared_context += "\n\n## 用户偏好\n"
+        if preferences:
+            shared_context += "\n".join(f"- {p}" for p in preferences)
+        else:
+            shared_context += "- （暂无）"
+
+        shared_context += f"\n\n## 创建时间\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+
+        shared_context_file = memory_store.shared_context_file
+        shared_context_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # 如果文件已存在，追加
+        if shared_context_file.exists():
+            existing = shared_context_file.read_text(encoding='utf-8')
+            shared_context = existing + "\n\n---\n\n" + shared_context
+
+        shared_context_file.write_text(shared_context, encoding='utf-8')
+        print(f"✅ 已生成全局记忆: {shared_context_file}")
+
+    # 显示运行命令
+    print(f"\n🚀 可以运行了：")
+    print(f"   python cli.py run --config {config_file}")
+    print(f"\n💡 提示：")
+    print(f"   - 可以手动编辑 {project_context_file} 追加项目信息")
+    if credentials or preferences:
+        print(f"   - 可以手动编辑 {shared_context_file} 追加全局信息")
+
+    return 0
 
 
 def find_config(base_path):
@@ -283,6 +693,33 @@ def main():
         "--config",
         required=True,
         help="任务配置文件路径 (YAML)"
+    )
+
+    # init-context 子命令
+    init_context_parser = subparsers.add_parser(
+        "init-context",
+        help="初始化记忆模板（全局共享记忆/项目私有记忆）"
+    )
+    init_context_parser.add_argument(
+        "--global",
+        dest="global_context",
+        action="store_true",
+        help="初始化全局共享记忆 (~/.kuxing/shared/context.md)"
+    )
+    init_context_parser.add_argument(
+        "--project",
+        dest="project_context",
+        action="store_true",
+        help="初始化项目私有记忆"
+    )
+    init_context_parser.add_argument(
+        "--config",
+        help="配置文件路径（用于确定项目）"
+    )
+    init_context_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="强制覆盖已有文件"
     )
 
     # run 子命令
@@ -357,6 +794,35 @@ def main():
         help="显示指定轮次"
     )
 
+    # parallel 子命令
+    parallel_parser = subparsers.add_parser(
+        "parallel",
+        help="并行执行多个项目（每个项目独立记忆空间）"
+    )
+    parallel_parser.add_argument(
+        "--config",
+        nargs="+",
+        dest="configs",
+        help="配置文件路径列表（默认使用 examples/ 下所有配置）"
+    )
+    parallel_parser.add_argument(
+        "--loop",
+        action="store_true",
+        help="使用循环模式持续执行"
+    )
+
+    # create-task 子命令
+    create_task_parser = subparsers.add_parser(
+        "create-task",
+        help="创建新任务（交互式生成配置和记忆）"
+    )
+    create_task_parser.add_argument(
+        "--project-name",
+        "-p",
+        required=True,
+        help="项目名称"
+    )
+
     # 解析参数
     args = parser.parse_args()
 
@@ -368,11 +834,14 @@ def main():
     # 执行对应子命令
     commands = {
         "init": cmd_init,
+        "init-context": cmd_init_context,
         "run": cmd_run,
+        "parallel": cmd_parallel,
         "status": cmd_status,
         "resume": cmd_resume,
         "reset": cmd_reset,
-        "show": cmd_show
+        "show": cmd_show,
+        "create-task": cmd_create_task
     }
 
     if args.command in commands:

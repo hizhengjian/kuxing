@@ -14,6 +14,7 @@ from config_schema import SchedulerConfig, load_config, create_tasks_state
 from task_queue import create_queue, TaskQueue
 from claude_invoker import ClaudeInvoker, InvokeResult
 from prompts import build_task_prompt, PromptBuilder, extract_result_from_output
+from memory_updater import MemoryUpdater
 
 
 class Scheduler:
@@ -58,6 +59,9 @@ class Scheduler:
         self.queue = create_queue(self.config.mode, {
             'loop_config': self.config.loop_config
         }, memory_store=self.memory_store)
+
+        # 创建记忆更新器
+        self.memory_updater = MemoryUpdater(self.memory_store)
 
         # 状态
         self.state: Optional[SchedulerState] = None
@@ -209,9 +213,10 @@ class Scheduler:
         # 记录轮次开始
         self._log_round_start(round_num, task.description)
 
-        # 构建prompt
+        # 构建prompt（注入完整上下文）
         context_summary = self.memory_store.get_context_for_next_round()
-        prompt = build_task_prompt(self.state, task_id, context_summary)
+        full_context = self.memory_store.get_full_context()  # 新增：全局+项目+知识沉淀
+        prompt = build_task_prompt(self.state, task_id, context_summary, full_context)
 
         # 记录prompt
         self._log_prompt(prompt, round_num)
@@ -315,6 +320,17 @@ class Scheduler:
         self.memory_store.save_round(round_state)
         self.logger.debug(f"[Round {round_num}] 轮次记忆已保存")
 
+        # 自动沉淀知识
+        if result_dict.get('status') == 'completed':
+            knowledge = self._extract_knowledge(result_dict)
+            if knowledge:
+                self.memory_store.append_knowledge_base(knowledge)
+                self.logger.debug(f"[Round {round_num}] 知识已沉淀")
+
+            # 自动更新项目记忆
+            self.memory_updater.update_from_result(result_dict)
+            self.logger.debug(f"[Round {round_num}] 项目记忆已更新")
+
         # 保存状态
         self.memory_store.save_state(self.state)
         self.logger.debug(f"[Round {round_num}] 调度器状态已保存")
@@ -323,6 +339,32 @@ class Scheduler:
         self._log_result(result_dict, round_num)
 
         return result_dict.get('status') == 'completed'
+
+    def _extract_knowledge(self, result: dict) -> str:
+        """
+        从执行结果中提取可沉淀的知识
+
+        Args:
+            result: 执行结果字典
+
+        Returns:
+            提取的知识内容，如果没有则返回空字符串
+        """
+        summary = result.get('summary', '')
+        hints = result.get('next_hints', '')
+
+        knowledge_parts = []
+
+        # 提取关键发现（包含特定关键词）
+        discovery_keywords = ['发现', '注意', '问题', '解决', '优化', '改进']
+        if any(keyword in summary for keyword in discovery_keywords):
+            knowledge_parts.append(f"**本轮发现**：\n{summary}")
+
+        # 提取经验总结
+        if hints and any(keyword in hints for keyword in ['建议', '注意', '经验', '教训']):
+            knowledge_parts.append(f"**经验总结**：\n{hints}")
+
+        return '\n\n'.join(knowledge_parts) if knowledge_parts else ''
 
     def run_until_complete(self, max_rounds: int = 50) -> dict:
         """

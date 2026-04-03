@@ -1,0 +1,4 @@
+# 苦行僧依赖
+# 仅需 pyyaml，其他均为 Python 标准库
+
+pyyaml>=5.0
