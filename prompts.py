@@ -83,7 +83,30 @@ next_hints: |
         # 先替换模板中的变量（除了 context_summary，它需要稍后插入）
         # 使用一个临时占位符
         prompt = prompt_template.replace("{context_summary}", "<<<CONTEXT_SUMMARY>>>")
-        prompt = prompt.format(project_path=project_path)
+
+        # 格式化时提供所有可能的变量
+        try:
+            prompt = prompt.format(
+                project_path=project_path,
+                round_num=self.round_num if hasattr(self, 'round_num') else 1
+            )
+        except KeyError as e:
+            # 如果还有其他未提供的变量，使用部分格式化
+            import string
+            formatter = string.Formatter()
+            # 获取所有需要的字段
+            field_names = [field_name for _, field_name, _, _ in formatter.parse(prompt) if field_name]
+            # 构建格式化参数
+            format_args = {
+                'project_path': project_path,
+                'round_num': self.round_num if hasattr(self, 'round_num') else 1
+            }
+            # 只格式化存在的字段
+            for field in field_names:
+                if field not in format_args:
+                    format_args[field] = f'{{{field}}}'  # 保留未知字段
+            prompt = prompt.format(**format_args)
+
         # 替换回真正的 context_summary
         prompt = prompt.replace("<<<CONTEXT_SUMMARY>>>", context_summary)
 
@@ -202,6 +225,9 @@ def build_task_prompt(
         project_path=state.project_path,
         mode=state.mode
     )
+
+    # 设置当前轮次（用于格式化 prompt_template 中的 {round_num}）
+    builder.round_num = state.current_round
 
     # 获取已完成的依赖任务
     depends_on_completed = [

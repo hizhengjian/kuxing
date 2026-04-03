@@ -289,17 +289,25 @@ cat memory/我的项目/session.md
 cat memory/我的项目/MEMORY.md
 ```
 
-### 配置 LLM 压缩
+### 配置说明
 
-如果你使用 MiniMax API 或其他兼容 API：
+**无需额外配置！** 
+
+kuxing 直接使用 `claude` 命令行工具，只要你的 `claude` 命令可用即可：
 
 ```bash
-# 设置 API key
-export ANTHROPIC_API_KEY="your-minimax-api-key"
+# 验证 claude 命令是否可用
+claude --version
 
-# 运行时会自动使用 LLM 压缩
+# 直接运行（无需配置 API key）
 python cli.py run --config examples/我的项目.yaml
 ```
+
+**说明**：
+- ✅ 主任务执行：使用 `claude` 命令
+- ✅ 记忆压缩：也使用 `claude` 命令
+- ✅ 无需配置 `ANTHROPIC_API_KEY` 环境变量
+- ✅ 使用你 `claude` 命令配置的任何 API（Claude、MiniMax 等）
 
 ---
 

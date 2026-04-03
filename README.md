@@ -18,6 +18,18 @@ Claude Code 多轮任务调度系统 - 跨会话持续执行多轮任务
 - Python 3.8+
 - Claude Code CLI (`claude` 命令在 PATH 中)
 
+**重要**：Kuxing 直接使用 `claude` 命令，无需额外配置 API key。
+
+### 验证环境
+
+```bash
+# 检查 claude 命令是否可用
+claude --version
+
+# 检查 Python 版本
+python --version
+```
+
 ### 安装步骤
 
 ```bash
@@ -38,8 +50,11 @@ python cli.py --help
 |------|------|
 | Python 3.8+ | 运行环境 |
 | pyyaml | 配置文件解析 |
+| claude 命令 | Claude Code CLI（必需） |
 
 其他均为 Python 标准库，无需额外安装。
+
+**配置说明**：详见 [CONFIGURATION.md](CONFIGURATION.md)
 
 ## 快速开始
 

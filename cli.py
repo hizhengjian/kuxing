@@ -620,9 +620,21 @@ def cmd_create_task(args):
         shared_context_file.write_text(shared_context, encoding='utf-8')
         print(f"✅ 已生成全局记忆: {shared_context_file}")
 
+    # 初始化项目记忆（v0.5.0 新增：自动创建 session.md 和 MEMORY.md）
+    print(f"\n🔄 初始化项目记忆...")
+    try:
+        init_args = type('obj', (object,), {'config': str(config_file)})()
+        cmd_init(init_args)
+        print(f"✅ 项目记忆已初始化")
+        print(f"   - MEMORY.md: 记忆索引")
+        print(f"   - session.md: 会话记忆（10个结构化 section）")
+    except Exception as e:
+        print(f"⚠️  初始化记忆失败: {e}")
+        print(f"   可以稍后手动运行: python cli.py init --config {config_file}")
+
     # 显示运行命令
     print(f"\n🚀 可以运行了：")
-    print(f"   python cli.py run --config {config_file}")
+    print(f"   python cli.py --config {config_file} run")
     print(f"\n💡 提示：")
     print(f"   - 可以手动编辑 {project_context_file} 追加项目信息")
     if credentials or preferences:

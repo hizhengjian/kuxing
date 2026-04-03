@@ -247,17 +247,17 @@ _逐步执行摘要（时间戳 + 简短描述）_
     def _update_section_in_content(self, content: str, section_name: str, new_content: str) -> str:
         """在内容中更新 section"""
         # 匹配 section：# Section\n_description_\n\n<content>\n\n# NextSection
-        pattern = f'(# {re.escape(section_name)}\\n_[^_]*_\\n\\n)(.*?)(\\n\\n# |$)'
+        # 注意：模板中 section 之间只有一个空行，不是两个
+        pattern = f'(# {re.escape(section_name)}\\n_[^_]*_\\n)(.*?)(\\n# |\\n\\n# |$)'
 
         def replacer(match):
-            return f'{match.group(1)}{new_content.strip()}{match.group(3)}'
+            # 如果有内容，添加两个换行符
+            if new_content.strip():
+                return f'{match.group(1)}\n{new_content.strip()}\n{match.group(3)}'
+            else:
+                return f'{match.group(1)}{match.group(3)}'
 
         updated = re.sub(pattern, replacer, content, flags=re.DOTALL)
-
-        # 如果没有匹配到，可能是空 section，尝试简化模式
-        if updated == content:
-            pattern = f'(# {re.escape(section_name)}\\n_[^_]*_\\n)(.*?)(\\n# |$)'
-            updated = re.sub(pattern, replacer, content, flags=re.DOTALL)
 
         return updated
 
@@ -272,7 +272,19 @@ _逐步执行摘要（时间戳 + 简短描述）_
         content = self.load()
 
         # 匹配 section 并在末尾追加
-        pattern = f'(# {re.escape(section_name)}\\n_[^_]*_\\n\\n)(.*?)(\\n\\n# |$)'
+        pattern = f'(# {re.escape(section_name)}\\n_[^_]*_\\n)(.*?)(\\n# |\\n\\n# |$)'
+
+        def replacer(match):
+            existing = match.group(2).strip()
+            if existing:
+                return f'{match.group(1)}\n{existing}\n{new_entry}\n{match.group(3)}'
+            else:
+                return f'{match.group(1)}\n{new_entry}\n{match.group(3)}'
+
+        updated = re.sub(pattern, replacer, content, flags=re.DOTALL)
+
+        # 保存更新后的内容
+        self.session_file.write_text(updated, encoding='utf-8')
 
         def replacer(match):
             existing_content = match.group(2).strip()

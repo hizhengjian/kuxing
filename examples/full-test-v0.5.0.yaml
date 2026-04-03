@@ -1,0 +1,27 @@
+project_name: "full-test-v0.5.0"
+project_path: "/tmp/full-test-v0.5.0"
+description: "完整功能测试：验证会话记忆、记忆索引、自动压缩"
+
+mode: "loop"
+
+tasks:
+  - id: "loop-task"
+    name: "循环任务"
+    prompt_template: |
+      你是一个测试助手。当前是 Round {round_num}。
+
+      请执行以下任务：
+      1. 在 /tmp/full-test-v0.5.0 目录创建一个文件 round_{round_num}.txt
+      2. 文件内容写入：
+         - 当前轮次：Round {round_num}
+         - 时间戳
+         - 一句话总结本轮做了什么
+      3. 列出 /tmp/full-test-v0.5.0 目录下的所有文件
+
+      完成后用 <result> 标签返回结果。
+    expected_output: "创建了 round_{round_num}.txt 文件"
+    depends_on: []
+
+loop_config:
+  task_id: "loop-task"
+  max_rounds: 2

@@ -599,6 +599,8 @@ class Scheduler:
         summary = {
             'total_rounds': self.state.current_round,
             'consecutive_success': consecutive_success,
+            'completed_tasks': consecutive_success,
+            'failed_tasks': 0,  # loop模式下暂不统计失败任务
             'elapsed_seconds': elapsed,
             'final_state': self.state.to_dict()
         }

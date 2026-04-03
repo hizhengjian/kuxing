@@ -1,0 +1,37 @@
+project_name: "test-v0.5.0"
+project_path: "/tmp/test-v0.5.0"
+description: "测试 v0.5.0 新功能：会话记忆、记忆索引、LLM压缩"
+
+tasks:
+  - id: "task1-create-file"
+    name: "task1-create-file"
+    prompt: |
+      创建一个简单的 Python 文件 test_hello.py，包含：
+      1. 一个 hello() 函数，返回 "Hello, World!"
+      2. 一个 main() 函数，调用 hello() 并打印结果
+      3. if __name__ == "__main__" 入口
+
+      文件路径：/tmp/test_hello.py
+    expected_output: "创建了 test_hello.py 文件"
+    depends_on: []
+
+  - id: "task2-add-feature"
+    name: "task2-add-feature"
+    prompt: |
+      修改 /tmp/test_hello.py，添加新功能：
+      1. 添加一个 greet(name) 函数，接受名字参数，返回 "Hello, {name}!"
+      2. 在 main() 中调用 greet("Claude") 并打印结果
+
+      保持原有的 hello() 函数不变。
+    expected_output: "添加了 greet() 函数"
+    depends_on: ["task1-create-file"]
+
+  - id: "task3-test-file"
+    name: "task3-test-file"
+    prompt: |
+      测试 /tmp/test_hello.py：
+      1. 运行文件：python /tmp/test_hello.py
+      2. 验证输出包含 "Hello, World!" 和 "Hello, Claude!"
+      3. 报告测试结果
+    expected_output: "测试通过"
+    depends_on: ["task2-add-feature"]

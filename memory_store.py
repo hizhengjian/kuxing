@@ -169,10 +169,23 @@ class MemoryStore:
         return "\n".join(context_parts)
 
     def clear_rounds(self) -> None:
-        """清空所有轮次记忆（保留config和state）"""
+        """清空所有轮次记忆（保留config和state，重置session.md）"""
         if self.rounds_dir.exists():
             for round_file in self.rounds_dir.glob("round_*.json"):
                 round_file.unlink()
+
+        # 重置 session.md（保留模板结构）
+        if self.session_file.exists():
+            from session_memory import SessionMemory
+            # 重新初始化 session.md
+            state = self.load_state()
+            if state:
+                session_memory = SessionMemory(self.memory_dir, state.project_name)
+                session_memory.initialize(
+                    task_name=state.project_name,
+                    round_num=1,
+                    task_description=""
+                )
 
     def reset_state(self) -> None:
         """重置调度器状态（轮次归零，任务重置为pending）"""
