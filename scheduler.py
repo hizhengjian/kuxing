@@ -15,6 +15,8 @@ from task_queue import create_queue, TaskQueue
 from claude_invoker import ClaudeInvoker, InvokeResult
 from prompts import build_task_prompt, PromptBuilder, extract_result_from_output
 from memory_updater import MemoryUpdater
+from session_memory import SessionMemory
+from llm_compressor import LLMCompressor
 
 
 class Scheduler:
@@ -62,6 +64,15 @@ class Scheduler:
 
         # 创建记忆更新器
         self.memory_updater = MemoryUpdater(self.memory_store)
+
+        # 创建会话记忆管理器
+        self.session_memory = SessionMemory(
+            self.memory_store.memory_dir,
+            self.config.project_name
+        )
+
+        # 创建 LLM 压缩器
+        self.llm_compressor = LLMCompressor(self.claude_invoker)
 
         # 状态
         self.state: Optional[SchedulerState] = None
@@ -181,6 +192,25 @@ class Scheduler:
             # 保存初始状态
             self.memory_store.save_state(self.state)
 
+        # 初始化记忆索引（如果不存在）
+        self.memory_store.create_memory_index()
+
+        # 初始化会话记忆（如果是第一轮）
+        if self.state.current_round == 0:
+            task_desc = self.config.tasks[0].description if self.config.tasks else "未指定任务"
+            self.session_memory.initialize(
+                task_name=self.config.project_name,
+                round_num=1,
+                task_description=task_desc
+            )
+            # 更新索引
+            self.memory_store.update_memory_index(
+                section="会话记忆",
+                title="当前会话",
+                filename="session.md",
+                description=f"Round 1，{task_desc}"
+            )
+
         print(f"项目: {self.state.project_name}")
         print(f"模式: {self.state.mode}")
         print(f"任务数: {len(self.state.tasks)}")
@@ -213,10 +243,17 @@ class Scheduler:
         # 记录轮次开始
         self._log_round_start(round_num, task.description)
 
-        # 构建prompt（注入完整上下文）
+        # 构建prompt（注入完整上下文和会话记忆）
         context_summary = self.memory_store.get_context_for_next_round()
-        full_context = self.memory_store.get_full_context()  # 新增：全局+项目+知识沉淀
-        prompt = build_task_prompt(self.state, task_id, context_summary, full_context)
+        full_context = self.memory_store.get_full_context()  # 全局+项目+知识沉淀
+        session_summary = self.session_memory.get_summary_for_prompt()  # 会话记忆摘要
+        prompt = build_task_prompt(
+            self.state,
+            task_id,
+            context_summary,
+            full_context,
+            session_summary
+        )
 
         # 记录prompt
         self._log_prompt(prompt, round_num)
@@ -330,6 +367,13 @@ class Scheduler:
             # 自动更新项目记忆
             self.memory_updater.update_from_result(result_dict)
             self.logger.debug(f"[Round {round_num}] 项目记忆已更新")
+
+            # 自动更新会话记忆
+            self.session_memory.extract_from_result(result_dict, round_num)
+            self.logger.debug(f"[Round {round_num}] 会话记忆已更新")
+
+        # 检查并压缩记忆文件（如果超出限制）
+        self.memory_store.check_and_compress_if_needed(self.llm_compressor)
 
         # 保存状态
         self.memory_store.save_state(self.state)

@@ -61,7 +61,8 @@ next_hints: |
         context_summary: str,
         depends_on_completed: list,
         project_path: str,
-        full_context: str = ""
+        full_context: str = "",
+        session_summary: str = ""
     ) -> str:
         """
         构建单轮任务的提示词
@@ -74,6 +75,7 @@ next_hints: |
             depends_on_completed: 已完成的依赖任务列表
             project_path: 项目路径
             full_context: 完整上下文（全局+项目+知识沉淀）
+            session_summary: 会话记忆摘要
 
         Returns:
             格式化后的完整提示词
@@ -95,14 +97,20 @@ next_hints: |
         if full_context:
             context_note = f"\n\n### 项目上下文（重要，请务必参考）\n{full_context}\n"
 
+        # 构造会话记忆摘要
+        session_note = ""
+        if session_summary:
+            session_note = f"\n\n{session_summary}\n"
+
         return f"""### 任务描述
 {task_description}
 
+{deps_note}{context_note}{session_note}
+### 任务详情
+{prompt}
+
 ### 预期输出
 {expected_output}
-{context_note}
-### 执行 Prompt
-{prompt}
 
 ## 执行要求
 1. 按照 prompt 执行任务
@@ -169,7 +177,8 @@ def build_task_prompt(
     state: SchedulerState,
     task_id: str,
     context_summary: str,
-    full_context: str = ""
+    full_context: str = "",
+    session_summary: str = ""
 ) -> str:
     """
     为指定任务构建完整的prompt
@@ -179,6 +188,7 @@ def build_task_prompt(
         task_id: 任务ID
         context_summary: 历史上下文摘要
         full_context: 完整上下文（全局+项目+知识沉淀）
+        session_summary: 会话记忆摘要
 
     Returns:
         完整的提示词字符串
@@ -193,21 +203,28 @@ def build_task_prompt(
         mode=state.mode
     )
 
-    # 获取已完成的依赖
-    completed_deps = [
+    # 获取已完成的依赖任务
+    depends_on_completed = [
         dep_id for dep_id in task.depends_on
         if dep_id in state.tasks and state.tasks[dep_id].status == "completed"
     ]
 
-    return builder.build_round_prompt(
+    # 构建系统提示词
+    system_prompt = builder.build_system_prompt()
+
+    # 构建轮次提示词
+    round_prompt = builder.build_round_prompt(
         task_description=task.description,
         prompt_template=task.prompt_template,
         expected_output=task.expected_output,
         context_summary=context_summary,
-        depends_on_completed=completed_deps,
+        depends_on_completed=depends_on_completed,
         project_path=state.project_path,
-        full_context=full_context
+        full_context=full_context,
+        session_summary=session_summary
     )
+
+    return f"{system_prompt}\n\n{round_prompt}"
 
 
 def extract_result_from_output(output: str) -> dict:

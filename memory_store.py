@@ -14,6 +14,11 @@ from state import RoundState, SchedulerState
 class MemoryStore:
     """记忆存储管理器"""
 
+    # 记忆文件大小限制（字符数）
+    MAX_SESSION_SIZE = 20000      # session.md 最大 20KB
+    MAX_CONTEXT_SIZE = 30000      # context.md 最大 30KB
+    MAX_KNOWLEDGE_SIZE = 25000    # knowledge_base.md 最大 25KB
+
     def __init__(self, base_path: str, project_slug: str):
         """
         初始化记忆存储
@@ -31,6 +36,9 @@ class MemoryStore:
         # 全局共享记忆目录（改为项目内路径，便于迁移）
         self.shared_context_dir = self.base_path / "shared_context"
         self.shared_context_file = self.shared_context_dir / "context.md"
+        # 新增：会话记忆和索引文件
+        self.session_file = self.memory_dir / "session.md"
+        self.index_file = self.memory_dir / "MEMORY.md"
 
     def ensure_dirs(self):
         """确保目录结构存在"""
@@ -442,3 +450,200 @@ class MemoryStore:
                 f.write(template)
             return str(self.shared_context_file)
         return ""
+
+    # ==================== 记忆索引管理 ====================
+
+    def load_memory_index(self) -> Dict[str, List[Dict]]:
+        """
+        加载记忆索引
+
+        Returns:
+            索引字典，格式：{section: [{title, filename, description}]}
+        """
+        if not self.index_file.exists():
+            return {}
+
+        content = self.index_file.read_text(encoding='utf-8')
+        index = {}
+        current_section = None
+
+        for line in content.split('\n'):
+            if line.startswith('## '):
+                current_section = line[3:].strip()
+                index[current_section] = []
+            elif line.startswith('- [') and current_section:
+                # 解析：- [标题](文件名) — 描述
+                match = re.match(r'- \[([^\]]+)\]\(([^\)]+)\) — (.+)', line)
+                if match:
+                    title, filename, description = match.groups()
+                    index[current_section].append({
+                        'title': title,
+                        'filename': filename,
+                        'description': description
+                    })
+
+        return index
+
+    def update_memory_index(self, section: str, title: str,
+                           filename: str, description: str):
+        """
+        更新记忆索引
+
+        Args:
+            section: section 名称（如"会话记忆"、"用户偏好"）
+            title: 记忆标题
+            filename: 文件名
+            description: 简短描述
+        """
+        self.ensure_dirs()
+
+        # 读取现有索引
+        if self.index_file.exists():
+            content = self.index_file.read_text(encoding='utf-8')
+        else:
+            content = f"# 项目记忆索引\n\n最后更新：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n---\n\n"
+
+        # 确保 section 存在
+        section_header = f"## {section}"
+        if section_header not in content:
+            content += f"\n{section_header}\n"
+
+        # 添加新条目
+        entry = f"- [{title}]({filename}) — {description}"
+
+        # 检查是否已存在
+        if entry in content:
+            return
+
+        # 插入到对应 section
+        lines = content.split('\n')
+        new_lines = []
+        in_section = False
+        inserted = False
+
+        for line in lines:
+            new_lines.append(line)
+            if line == section_header:
+                in_section = True
+            elif in_section and not inserted:
+                if line.startswith('## ') or (line == '' and len(new_lines) > 1):
+                    # 到达下一个 section 或空行，插入条目
+                    new_lines.insert(-1, entry)
+                    inserted = True
+                    in_section = False
+
+        if in_section and not inserted:
+            # section 是最后一个，直接追加
+            new_lines.append(entry)
+
+        # 更新时间戳
+        content = '\n'.join(new_lines)
+        content = re.sub(
+            r'最后更新：.*',
+            f'最后更新：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}',
+            content
+        )
+
+        self.index_file.write_text(content, encoding='utf-8')
+
+    def create_memory_index(self):
+        """创建初始记忆索引"""
+        if self.index_file.exists():
+            return
+
+        self.ensure_dirs()
+
+        template = f"""# 项目记忆索引
+
+最后更新：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+---
+
+## 会话记忆
+- [当前会话](session.md) — 当前执行状态和下一步计划
+
+## 项目背景
+- [项目信息](context.md) — 代码路径、文档路径、账号信息
+
+## 知识沉淀
+- [历史经验](knowledge_base.md) — 最佳实践、避坑指南
+
+---
+
+**使用说明**：
+- 每次执行前，先读取此索引文件
+- 根据任务需要，按需加载相关记忆文件
+- 新增记忆时，同步更新此索引
+"""
+        self.index_file.write_text(template, encoding='utf-8')
+
+    # ==================== 记忆大小控制 ====================
+
+    def check_and_compress_if_needed(self, compressor=None):
+        """
+        检查并压缩记忆文件（如果超出限制）
+
+        Args:
+            compressor: LLMCompressor 实例（可选）
+        """
+        files_to_check = [
+            (self.session_file, self.MAX_SESSION_SIZE, "session"),
+            (self.context_file, self.MAX_CONTEXT_SIZE, "context"),
+            (self.knowledge_base_file, self.MAX_KNOWLEDGE_SIZE, "knowledge")
+        ]
+
+        for file_path, max_size, memory_type in files_to_check:
+            if not file_path.exists():
+                continue
+
+            content = file_path.read_text(encoding='utf-8')
+            current_size = len(content)
+
+            if current_size > max_size:
+                print(f"⚠️  {file_path.name} 超出限制 ({current_size} > {max_size})，开始压缩...")
+
+                if compressor:
+                    # 使用 LLM 压缩
+                    compressed = compressor.compress_memory(
+                        content,
+                        max_size,
+                        memory_type
+                    )
+                else:
+                    # 使用简单截断
+                    compressed = self._simple_truncate(content, max_size)
+
+                file_path.write_text(compressed, encoding='utf-8')
+                new_size = len(compressed)
+                reduction = (1 - new_size / current_size) * 100
+                print(f"✅ 压缩完成：{current_size} → {new_size} ({reduction:.1f}% 减少)")
+
+    def _simple_truncate(self, content: str, target_size: int) -> str:
+        """
+        简单截断（保留前面部分）
+
+        Args:
+            content: 原始内容
+            target_size: 目标大小
+
+        Returns:
+            截断后的内容
+        """
+        if len(content) <= target_size:
+            return content
+
+        # 在 section 边界截断
+        lines = content.split('\n')
+        truncated_lines = []
+        current_size = 0
+
+        for line in lines:
+            if current_size + len(line) + 1 > target_size:
+                break
+            truncated_lines.append(line)
+            current_size += len(line) + 1
+
+        truncated = '\n'.join(truncated_lines)
+        truncated += '\n\n[... 内容已截断，已压缩到目标大小 ...]'
+
+        return truncated
