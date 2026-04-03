@@ -12,6 +12,17 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent))
 
 
+def robust_input(prompt: str = "") -> str:
+    """安全的输入函数，处理终端编码问题"""
+    try:
+        return input(prompt)
+    except UnicodeDecodeError:
+        # 从缓冲区读取原始字节并忽略编码错误
+        sys.stdout.write(prompt)
+        sys.stdout.flush()
+        return sys.stdin.buffer.readline().decode("utf-8", errors="ignore").strip()
+
+
 def check_dependencies():
     """检查依赖是否满足"""
     errors = []
@@ -489,7 +500,7 @@ def cmd_create_task(args):
     code_paths = []
     print("\n📂 代码路径（每行一个，输入空行结束）:")
     while True:
-        path = input("  路径: ").strip()
+        path = robust_input("  路径: ").strip()
         if not path:
             break
         code_paths.append(path)
@@ -497,37 +508,37 @@ def cmd_create_task(args):
     doc_paths = []
     print("\n📄 文档路径（每行一个，输入空行结束）:")
     while True:
-        path = input("  路径: ").strip()
+        path = robust_input("  路径: ").strip()
         if not path:
             break
         doc_paths.append(path)
 
-    description = input("\n📝 项目描述（可选）: ").strip()
+    description = robust_input("\n📝 项目描述（可选）: ").strip()
 
     # 账号信息
-    has_credentials = input("\n🔐 是否需要保存账号信息？(y/n): ").lower() == 'y'
+    has_credentials = robust_input("\n🔐 是否需要保存账号信息？(y/n): ").lower() == 'y'
     credentials = []
     if has_credentials:
         print("账号信息（格式：服务名 账号 密码，每行一个，输入空行结束）:")
         while True:
-            cred = input("  ").strip()
+            cred = robust_input("  ").strip()
             if not cred:
                 break
             credentials.append(cred)
 
     # 偏好设置
     preferences = []
-    has_preferences = input("\n⚙️  是否需要保存偏好设置？(y/n): ").lower() == 'y'
+    has_preferences = robust_input("\n⚙️  是否需要保存偏好设置？(y/n): ").lower() == 'y'
     if has_preferences:
         print("偏好设置（每行一个，输入空行结束）:")
         while True:
-            pref = input("  ").strip()
+            pref = robust_input("  ").strip()
             if not pref:
                 break
             preferences.append(pref)
 
     # 任务配置
-    max_rounds_input = input("\n🔄 最大轮次（默认50）: ").strip()
+    max_rounds_input = robust_input("\n🔄 最大轮次（默认50）: ").strip()
     max_rounds = int(max_rounds_input) if max_rounds_input else 50
 
     print("\n🔄 正在生成配置和记忆文件...")
@@ -584,7 +595,7 @@ def cmd_create_task(args):
     memory_store = MemoryStore(str(base_path), project_slug)
     memory_store.ensure_dirs()
 
-    project_context_file = memory_store.project_dir / "context.md"
+    project_context_file = memory_store.memory_dir / "context.md"
     project_context_file.parent.mkdir(parents=True, exist_ok=True)
     project_context_file.write_text(project_context, encoding='utf-8')
 
