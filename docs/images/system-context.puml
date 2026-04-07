@@ -1,0 +1,91 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+title 系统上下文图 (C4 风格)
+
+skinparam component {
+    BackgroundColor<<cli>> LightBlue
+    BackgroundColor<<scheduler>> LightGreen
+    BackgroundColor<<memory>> LightYellow
+    BackgroundColor<<external>> LightGray
+}
+
+package "用户层" {
+    [用户] as User #LightCyan
+    note right of User
+    通过 CLI 命令交互：
+    - python cli.py run
+    - python cli.py create-task
+    - python cli.py status
+    end note
+}
+
+package "CLI 层" {
+    component [cli.py] as CLI <<cli>>
+    note right of CLI
+    命令入口：
+    - init, run, status
+    - resume, reset
+    - show, create-task
+    end note
+}
+
+package "调度器层" {
+    component [Scheduler] as Sched <<scheduler>>
+    component [TaskQueue] as TQ <<scheduler>>
+    component [ClaudeInvoker] as CI <<scheduler>>
+
+    Sched --> TQ : 获取任务
+    Sched --> CI : 调用 Claude
+    TQ --> CI : 任务定义
+}
+
+package "记忆系统层" #LightYellow {
+    component [MemoryStore] as MS <<memory>>
+    component [SessionMemory] as SM <<memory>>
+    component [LLMCompressor] as LLM <<memory>>
+    component [MemoryUpdater] as MU <<memory>>
+
+    MS --> SM : 读写会话
+    MS --> LLM : 压缩检查
+    SM --> MU : 提取结果
+}
+
+package "持久化层" {
+    database "memory/{project}/" as MemDir #LightGray {
+        folder "context.md" as ctx
+        folder "session.md" as sess
+        folder "knowledge_base.md" as kb
+        folder "rounds/" as rounds
+    }
+
+    database "shared_context/" as Shared #LightGray {
+        folder "context.md" as shared_ctx
+    }
+}
+
+package "外部系统" {
+    component ["Claude Code CLI"] as Claude <<external>>
+    component ["文件系统"] as FS <<external>>
+}
+
+User --> CLI : CLI 命令
+CLI --> Sched : 初始化调度
+Sched --> CI : 构建 Prompt
+CI --> Claude : 调用 claude 命令
+Claude --> CI : 返回结果
+Sched --> MS : 保存/读取记忆
+MS --> MemDir : 持久化到磁盘
+MS --> Shared : 读写共享记忆
+Sched --> FS : 文件操作
+
+legend right
+    |= 颜色 |= 层级 |
+    |<#LightCyan>| 用户层 |
+    |<#LightBlue>| CLI 层 |
+    |<#LightGreen>| 调度器层 |
+    |<#LightYellow>| 记忆系统层 |
+    |<#LightGray>| 持久化/外部 |
+endlegend
+
+@enduml

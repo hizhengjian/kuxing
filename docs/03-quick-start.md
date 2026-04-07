@@ -102,7 +102,7 @@ tasks:
 ## 步骤 3：初始化项目
 
 ```bash
-python cli.py init --config examples/hello-world.yaml
+python cli.py --config examples/hello-world.yaml init
 ```
 
 **输出示例：**
@@ -207,7 +207,7 @@ python cli.py --config examples/hello-world.yaml show --history
 | 命令 | 说明 |
 |------|------|
 | `python cli.py create-task -p "项目名"` | 交互式创建新任务 |
-| `python cli.py init --config <file>` | 初始化项目 |
+| `python cli.py --config <file> init` | 初始化项目 |
 | `python cli.py run` | 运行任务（串行模式） |
 | `python cli.py run --loop` | 运行任务（循环模式） |
 | `python cli.py status` | 查看当前状态 |

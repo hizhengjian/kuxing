@@ -49,7 +49,7 @@ kuxing init --config <配置文件路径>
 
 ```bash
 # 初始化项目
-python cli.py init --config examples/hello-world.yaml
+python cli.py --config examples/hello-world.yaml init
 
 # 输出
 初始化项目: Hello World
@@ -152,7 +152,7 @@ python cli.py run --loop --max-rounds 100
 python cli.py run --dry-run
 
 # 指定配置文件
-python cli.py run --config examples/my-task.yaml
+python cli.py --config examples/my-task.yaml run
 ```
 
 ### 循环模式
@@ -197,7 +197,7 @@ kuxing parallel [选项]
 python cli.py parallel
 
 # 指定配置文件列表
-python cli.py parallel --config examples/task1.yaml examples/task2.yaml
+python cli.py --config examples/task1.yaml --config examples/task2.yaml parallel
 
 # 循环模式
 python cli.py parallel --loop
@@ -218,7 +218,7 @@ python cli.py parallel --loop
 ============================================================
 
 启动进程: project-a
-  命令: python cli.py run --config examples/project-a.yaml
+  命令: python cli.py --config examples/project-a.yaml run
   日志: parallel_logs/project-a_20260403_103000.log
   PID: 12345
 
@@ -245,7 +245,7 @@ kuxing status [选项]
 python cli.py status
 
 # 指定配置文件
-python cli.py status --config examples/hello-world.yaml
+python cli.py --config examples/hello-world.yaml status
 ```
 
 ### 输出示例

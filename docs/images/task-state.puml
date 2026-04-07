@@ -1,0 +1,57 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+title 任务执行流程与状态
+
+skinparam component {
+    BackgroundColor<<task>> LightBlue
+    BackgroundColor<<memory>> LightGreen
+    BackgroundColor<<decision>> LightYellow
+}
+
+component "任务队列" as TQ <<task>>
+component "执行中" as Running <<task>>
+component "等待 Claude" as Waiting <<task>>
+component "处理结果" as Processing <<task>>
+component "任务完成" as Done <<task>>
+
+component "记忆系统" as Memory <<memory>>
+component "加载上下文" as Load <<memory>>
+component "保存记忆" as Save <<memory>>
+component "压缩检查" as Compress <<memory>>
+
+TQ --> Running : get_next_task()
+Running --> Waiting : invoke()
+Waiting --> Processing : Claude 返回
+
+Processing --> Running : 提取结果
+Processing --> Done : should_continue()=False
+Processing --> TQ : should_continue()=True
+
+Processing --> Save : 更新记忆
+Save --> Compress : 检查大小
+Compress --> Load : 大小正常
+Compress --> Memory : 压缩
+
+Load --> Memory : 上下文就绪
+
+note right of TQ
+执行模式：
+- 串行：Task1 → Task2 → Task3
+- 并行：Task1, Task2, Task3 同时
+end note
+
+note right of Compress
+压缩条件：
+- session.md > 20000 字符
+- context.md > 30000 字符
+- knowledge > 25000 字符
+end note
+
+legend right
+    |= 颜色 |= 类型 |
+    |<#LightBlue>| 任务执行 |
+    |<#LightGreen>| 记忆管理 |
+endlegend
+
+@enduml

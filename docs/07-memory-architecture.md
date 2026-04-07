@@ -358,7 +358,7 @@ _文档整理 - Round 3_
 - `docs/04-commands.md` — 命令参考 (编辑中)
 
 # 工作流程
-- [10:00] `python cli.py run --config examples/write_docs.yaml`
+- [10:00] `python cli.py --config examples/write_docs.yaml run`
 - [10:15] 更新 01-overview.md
 - [10:30] 创建 02-installation.md
 - [11:00] 创建 03-quick-start.md

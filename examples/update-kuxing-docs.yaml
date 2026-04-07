@@ -1,0 +1,143 @@
+# 苦行僧文档完善任务配置
+# 特点：Claude 每轮自己判断下一步要做什么，实现自主迭代完善文档
+
+project_name: "kuxing文档完善"
+project_path: /home/zhengjian/claudecode_projects/kuxing
+mode: loop
+
+tasks:
+  - id: task_doc_writer
+    type: agent
+    description: "自主完善 kuxing 项目文档"
+    prompt_template: |
+      ## 本轮任务
+
+      你是一个专业的技术文档工程师，负责完善 /home/zhengjian/claudecode_projects/kuxing/docs/ 目录下的文档。
+
+      ### 你的职责
+
+      1. **分析已有文档**：查看 docs/ 目录下有哪些文档，已有什么内容
+      2. **确定工作重点**：根据历史上下文，判断哪篇文档最需要完善
+      3. **执行完善工作**：按照文档方法论，添加/改进内容
+      4. **判断下一步**：完成本轮后，明确告诉下一轮应该做什么
+
+      ### 文档方法论要求
+
+      **First Principles (基础原理)**：
+      - 解释"为什么"比"是什么"更重要
+      - 从根本原因出发描述问题
+
+      **5W2H 分析**：
+      - What（是什么）、Why（为什么）
+      - Who（谁需要）、When（何时用）、Where（在哪用）
+      - How（如何用）、How Much（成本/收益）
+
+      **Feynman 技巧**：
+      - 用简单直白的语言解释复杂概念
+      - 如果解释后，外行也能理解，就算成功
+
+      **STAR 法则（场景化）**：
+      - Situation（情境）：什么场景下需要这个功能
+      - Task（任务）：要完成什么
+      - Action（行动）：具体怎么做
+      - Result（结果）：最终效果
+
+      ### 图表规范
+
+      **必须创建图表的场景**：
+      - 系统架构（多组件关系）
+      - 执行流程（多步骤顺序）
+      - 状态机（状态流转）
+      - 数据流（数据传递路径）
+
+      **ASCII 图**：
+      - 用于简单流程、对比图、序列图
+      - 直接写在 markdown 中
+
+      **PlantUML 图**（用于复杂图）：
+      - 源文件保存到 docs/images/*.puml
+      - 生成 SVG 和 PNG：plantuml -tsvg -tpng docs/images/*.puml
+      - 嵌入文档：![](./images/xxx.svg)
+
+      **draw.io 图**（用于高保真设计）：
+      - 源文件保存到 docs/images/*.drawio
+      - 导出 SVG 和 PNG
+      - 嵌入文档：![](./images/xxx.svg)
+
+      ### PlantUML 配色规范
+
+      ```plantuml
+      ' 系统架构图配色
+      skinparam component {{
+          BackgroundColor<<init>> LightBlue
+          BackgroundColor<<process>> LightGreen
+          BackgroundColor<<config>> LightYellow
+          BackgroundColor<<wait>> Pink
+          BackgroundColor<<ai>> LightCyan
+      }}
+
+      ' 序列图配色
+      box "初始化" #LightBlue
+      end box
+      box "执行" #LightGreen
+      end box
+      box "完成" #LightYellow
+      end box
+      ```
+
+      ### 工作流程
+
+      每轮执行时：
+      1. 读取 context_summary，了解之前完成了什么
+      2. 检查 docs/ 目录状态
+      3. 确定本轮要完善的文档
+      4. 执行完善工作
+      5. 在 next_hints 中明确告诉下一轮要做什么
+
+      ### 文档完善优先级
+
+      建议按以下顺序完善：
+
+      1. **01-overview.md** - 项目概览（最先完成，让读者快速了解项目）
+      2. **06-scheduler-architecture.md** - 调度器架构（核心技术文档）
+      3. **07-memory-architecture.md** - 记忆架构（核心技术文档）
+      4. **03-quick-start.md** - 快速开始（用户入口文档）
+      5. **04-commands.md** - 命令参考（完整命令文档）
+      6. **05-config-guide.md** - 配置指南（配置参考）
+      7. **09-examples.md** - 使用案例（实际案例）
+      8. **README.md** - 主文档（项目入口）
+
+      ### 输出格式
+
+      完成后必须输出：
+
+      <result>
+      files_modified:
+        - docs/01-overview.md
+      files_created:
+        - docs/images/architecture.svg
+        - docs/images/architecture.puml
+      summary: |
+        本轮完成了以下工作：
+        1. 分析了现有文档状态
+        2. 完善了 01-overview.md，添加了：
+           - 项目架构对比图（ASCII）
+           - 系统组件关系图（PlantUML）
+           - 核心执行流程图（PlantUML）
+        3. 创建了 docs/images/ 目录存放图表源文件
+      next_hints: |
+        建议下一轮继续完善 06-scheduler-architecture.md，重点添加：
+        - 调度器与各组件的交互时序图
+        - 单轮执行流程的详细数据流图
+        - 任务队列的状态机图
+        或者如果发现其他文档更需要完善，也可以自主决定。
+      </result>
+
+    expected_output: "完善文档并输出清晰的 next_hints 指导下一轮"
+
+loop_config:
+  first_task_id: task_doc_writer
+  task_id: task_doc_writer
+  max_rounds: 20
+  stop_condition: ""
+  interval_seconds: 10

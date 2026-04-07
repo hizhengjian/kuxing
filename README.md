@@ -54,7 +54,7 @@ python cli.py --help
 
 其他均为 Python 标准库，无需额外安装。
 
-**配置说明**：详见 [CONFIGURATION.md](CONFIGURATION.md)
+**配置说明**：详见 [配置指南](docs/05-config-guide.md)
 
 ## 快速开始
 
@@ -78,7 +78,7 @@ python cli.py create-task --project-name "我的项目"
 # - shared_context/context.md（全局记忆）
 
 # 直接运行
-python cli.py run --config examples/我的项目.yaml
+python cli.py --config examples/我的项目.yaml run
 ```
 
 ### 方式 2：手动创建配置文件
@@ -94,13 +94,13 @@ python cli.py --help
 
 ```bash
 # 使用示例配置运行
-python cli.py run --config examples/claude-code-50rounds.yaml
+python cli.py --config examples/claude-code-50rounds.yaml run
 
 # 强制使用循环模式
-python cli.py run --config examples/claude-code-50rounds.yaml --loop
+python cli.py --config examples/claude-code-50rounds.yaml run --loop
 
 # 限制最大轮次
-python cli.py run --config examples/claude-code-50rounds.yaml --max-rounds 10
+python cli.py --config examples/claude-code-50rounds.yaml run --max-rounds 10
 ```
 
 ### 3. 启动多项目并行
@@ -283,7 +283,7 @@ loop_config:
 
 ```bash
 # 开始执行
-$ python cli.py run --config examples/claude-code-50rounds.yaml
+$ python cli.py --config examples/claude-code-50rounds.yaml run
 
 发现已有状态，加载中...
 项目: Claude Code 源码全景分析 50轮
@@ -573,6 +573,59 @@ kuxing/
     └── *.log
 ```
 
+## 系统架构图
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           用户层 (User)                                  │
+│                    CLI 命令 / YAML 配置文件                              │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          CLI 入口 (cli.py)                               │
+│              create-task / run / parallel / status / resume             │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     调度器层 (Scheduler)                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │
+│  │  TaskQueue   │  │MemoryStore   │  │ClaudeInvoker│  │  Prompts    │ │
+│  │  任务队列     │  │  记忆存储    │  │ Claude调用   │  │  Prompt模板 │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └─────────────┘ │
+│         │                 │                  │                           │
+│         │                 ▼                  │                           │
+│         │          ┌──────────────┐          │                           │
+│         │          │SessionMemory│          │                           │
+│         │          │  会话记忆    │◄─────────┘                           │
+│         │          └──────────────┘                                    │
+│         │                 │                                             │
+│         │                 ▼                                             │
+│         │          ┌──────────────┐  ┌──────────────┐                   │
+│         │          │MemoryUpdater │  │ LLMCompressor│                   │
+│         │          │  自动记忆更新 │  │   记忆压缩   │                   │
+│         │          └──────────────┘  └──────────────┘                   │
+└─────────┼─────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          执行层 (Agent)                                   │
+│                      Claude Code CLI (外部)                             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**组件交互流程**：
+
+1. **配置加载**：CLI 解析 YAML 配置，初始化 Scheduler
+2. **任务获取**：TaskQueue 根据模式（串行/并行/循环）返回任务
+3. **Prompt 构建**：从 MemoryStore 获取上下文，注入 Prompts 模板
+4. **Claude 调用**：ClaudeInvoker 调用 Claude Code CLI 执行任务
+5. **结果处理**：解析输出，MemoryUpdater 更新记忆，SessionMemory 提取摘要
+6. **状态保存**：MemoryStore 保存轮次状态到 JSON 文件
+
+**详细交互时序图**：详见 [系统上下文图](docs/images/system-context.svg)
+
 ## 日志系统
 
 每次运行会自动生成带时间戳的日志文件：
@@ -679,7 +732,7 @@ loop_config:
 
 ```bash
 # 先用 dry-run 模式测试配置是否正确
-python cli.py run --config examples/claude-code-50rounds.yaml --dry-run
+python cli.py --config examples/claude-code-50rounds.yaml run --dry-run
 ```
 
 ### 2. 定期检查状态
@@ -717,10 +770,10 @@ tail -f memory/project_a/logs/run_*.log
 ```bash
 # 方法1: 重置当前项目记忆
 python cli.py reset --confirm
-python cli.py run --config new_project.yaml
+python cli.py --config new_project.yaml run
 
 # 方法2: 直接用新配置运行（会覆盖memory中的配置）
-python cli.py run --config new_project.yaml
+python cli.py --config new_project.yaml run
 ```
 
 ### Q: 任务中途失败了怎么办？
@@ -785,12 +838,33 @@ xdg-open htmlcov/index.html  # Linux
 
 ---
 
-**版本**: 0.3.0
-**新功能**: 
-- 分层记忆系统（全局共享/项目私有/知识沉淀）
-- 多项目并行执行
-- 自动知识沉淀
-- 环境变量验证
-- 完整的单元测试
+---
+
+## 完整文档
+
+详细文档请参考 `/docs/` 目录：
+
+| 文档 | 说明 |
+|------|------|
+| [docs/SUMMARY.md](docs/SUMMARY.md) | **文档索引** - 快速导航、文档层级、阅读路径 |
+| [docs/01-overview.md](docs/01-overview.md) | 项目概览、核心特性、与 Claude Code 对比 |
+| [docs/02-installation.md](docs/02-installation.md) | 安装指南 |
+| [docs/03-quick-start.md](docs/03-quick-start.md) | 5 分钟快速开始 |
+| [docs/04-commands.md](docs/04-commands.md) | 完整命令参考 |
+| [docs/05-config-guide.md](docs/05-config-guide.md) | YAML 配置详解 |
+| [docs/06-scheduler-architecture.md](docs/06-scheduler-architecture.md) | 调度器架构详解 |
+| [docs/07-memory-architecture.md](docs/07-memory-architecture.md) | 记忆系统架构详解 |
+| [docs/08-troubleshooting.md](docs/08-troubleshooting.md) | 常见问题解答 |
+| [docs/09-examples.md](docs/09-examples.md) | 完整使用案例 |
+| [docs/10-best-practices.md](docs/10-best-practices.md) | 最佳实践指南 |
+| [docs/11-contributing.md](docs/11-contributing.md) | 贡献指南 |
+
+**版本**: 0.5.0
+
+**v0.5.0 新功能**:
+- 结构化会话记忆（session.md）：10 个结构化 section
+- 记忆索引文件（MEMORY.md）：快速定位相关记忆
+- 记忆大小控制：自动压缩防止膨胀
+- 自动记忆更新：从 result 标签提取文件/命令/错误
 
 **作者**: Claude Code

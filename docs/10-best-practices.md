@@ -313,7 +313,7 @@ tasks:
 export KUXING_DEBUG=true
 
 # 或者运行时启用
-python cli.py run --config config.yaml --debug
+python cli.py --config config.yaml run --debug
 ```
 
 ### 4.2 日志获取
@@ -466,9 +466,9 @@ tasks:
 
 ```bash
 # 运行前验证路径
-python cli.py validate --config config.yaml
+python cli.py --config config.yaml validate
 # 或
-python cli.py run --config config.yaml --dry-run
+python cli.py --config config.yaml run --dry-run
 ```
 
 ### 6.2 记忆系统错误
@@ -558,7 +558,7 @@ pkill -f "python.*cli.py"
 cp -r memory/{project} memory/{project}.backup.$(date +%Y%m%d%H%M%S)
 
 # 3. 检查配置文件
-python cli.py validate --config memory/{project}/config.yaml
+python cli.py --config memory/{project}/config.yaml validate
 
 # 4. 重置到安全状态
 python cli.py reset --project-name "项目"

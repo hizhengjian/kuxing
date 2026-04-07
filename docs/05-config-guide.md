@@ -383,7 +383,7 @@ loop_config:
 运行 `init` 或 `run` 时会自动验证配置：
 
 ```bash
-python cli.py init --config examples/my-config.yaml
+python cli.py --config examples/my-config.yaml init
 ```
 
 ### 常见错误

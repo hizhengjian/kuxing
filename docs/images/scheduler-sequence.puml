@@ -1,0 +1,157 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+title 调度器执行序列图 (v0.5.0)
+
+skinparam sequence {
+    ArrowColor DeepSkyBlue
+    ActorBorderColor blue
+    LifeLineBorderColor blue
+    LifeLineBackgroundColor #A9DCDF
+    ParticipantBorderColor DeepSkyBlue
+    ParticipantBackgroundColor DodgerBlue
+    ParticipantFontColor white
+    ParticipantFontStyle bold
+    ActorBackgroundColor aqua
+    ActorFontColor DeepSkyBlue
+}
+
+box "调度层" #LightBlue
+    participant "Scheduler" as S #LightBlue
+    participant "TaskQueue" as TQ #LightBlue
+end box
+
+box "记忆层" #LightGreen
+    participant "MemoryStore" as MS #LightGreen
+    participant "SessionMemory" as SM #LightGreen
+    participant "LLMCompressor" as LLM #LightGreen
+end box
+
+box "执行层" #LightYellow
+    participant "ClaudeInvoker" as CI #LightYellow
+    participant "Claude Code" as CC #LightYellow
+end box
+
+== 1. 获取任务 ==
+
+S -> TQ: get_next_task()
+activate TQ
+TQ --> S: task_id or None
+deactivate TQ
+
+alt 任务为空
+    S -> S: 停止调度，输出最终结果
+end
+
+== 2. 构建 Prompt（三层上下文） ==
+
+S -> MS: get_context_for_next_round()
+activate MS
+MS --> S: round_context
+deactivate MS
+
+S -> SM: get_summary_for_prompt()
+activate SM
+SM --> S: session_summary
+deactivate SM
+
+S -> S: build_task_prompt(task, round_context, session_summary)
+note right #FFFACD
+Prompt 结构：
+1. 本轮任务
+2. 会话记忆摘要（SessionMemory）
+3. 历史上下文（MemoryStore）
+4. 项目背景
+5. 执行 Prompt
+end note
+
+== 3. 调用 Claude ==
+
+S -> CI: invoke(task_id, prompt)
+activate CI
+
+CI -> CC: claude --print [prompt]
+activate CC
+CC --> CI: result/output
+deactivate CC
+
+CI --> S: result
+deactivate CI
+
+== 4. 提取结果 ==
+
+S -> SM: extract_from_result(result, round_num)
+activate SM
+
+SM -> SM: update_round_number()
+note right #ADD8E6: 更新执行标题中的轮次号
+SM -> SM: update_current_state()
+note right #ADD8E6: 更新"当前状态" section
+SM -> SM: add_key_file()
+note right #ADD8E6: 添加"关键文件" section
+SM -> SM: add_worklog()
+note right #ADD8E6: 添加"工作日志" section
+
+alt 包含错误信息
+    SM -> SM: add_error()
+    note right #FFB6C1: 更新"错误与修正" section
+end
+
+SM --> S: session_update
+deactivate SM
+
+== 5. 更新记忆 ==
+
+S -> MS: save_round(task_id, result, session_update)
+activate MS
+
+alt 文件过大需要压缩
+    MS -> LLM: check_and_compress_if_needed()
+    activate LLM
+    LLM -> LLM: compress_memory()
+    note right #FAFAD2
+    压缩条件：
+    - session.md > 20000 字符
+    - context.md > 30000 字符
+    - knowledge > 25000 字符
+    end note
+    LLM --> MS: compressed
+    deactivate LLM
+end
+
+MS -> MS: save to filesystem
+note right #98FB98
+保存文件：
+- session.md
+- context.md
+- rounds/round_N.json
+end note
+
+MS --> S: saved
+deactivate MS
+
+== 6. 判断是否继续 ==
+
+S -> TQ: should_continue()
+activate TQ
+TQ --> S: True/False
+deactivate TQ
+
+alt should_continue() == True
+    S -> S: 下一轮 loop
+else
+    S -> S: 停止调度
+end
+
+legend right
+    |= 颜色 |= 层级 |
+    |<#LightBlue>| 调度层 |
+    |<#LightGreen>| 记忆层 |
+    |<#LightYellow>| 执行层 |
+    |<#FFFACD>| Prompt 结构说明 |
+    |<#ADD8E6>| SessionMemory 更新 |
+    |<#FFB6C1>| 错误处理 |
+    |<#98FB98>| 持久化成功 |
+endlegend
+
+@enduml

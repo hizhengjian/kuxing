@@ -639,10 +639,10 @@ python cli.py reset --project-name "项目名"
 1. **每个项目使用独立的记忆目录**：
 ```bash
 # 项目 A
-python cli.py run --config project_a.yaml --memory-dir memory/project_a
+python cli.py --config project_a.yaml --memory-dir memory/project_a run
 
 # 项目 B
-python cli.py run --config project_b.yaml --memory-dir memory/project_b
+python cli.py --config project_b.yaml --memory-dir memory/project_b run
 ```
 
 2. **或使用项目 slug 自动隔离**：

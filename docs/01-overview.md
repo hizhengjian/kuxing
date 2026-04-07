@@ -251,6 +251,8 @@ v0.5.0 引入了**结构化会话记忆**机制，解决了长期任务执行中
 
 ### 整体架构
 
+> **提示**：以下为 ASCII 简化版架构图，详细交互时序请参考 [系统上下文图](./images/system-context.svg)。
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         kuxing 系统架构                          │
@@ -295,6 +297,14 @@ v0.5.0 引入了**结构化会话记忆**机制，解决了长期任务执行中
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### PlantUML 详细架构图
+
+![系统上下文图](./images/system-context.svg)
+
+*图 4-1: 系统上下文图（C4 风格），展示 kuxing 与外部系统的交互关系*
+
+---
 
 ### 记忆系统架构
 
@@ -568,10 +578,10 @@ python cli.py create-task --project-name "我的项目"
 
 ```bash
 # 使用循环模式运行
-python cli.py run --config examples/my-project.yaml --loop
+python cli.py --config examples/update-kuxing-docs.yaml run --loop
 
 # 限制最大轮次
-python cli.py run --config examples/my-project.yaml --max-rounds 50
+python cli.py --config examples/my-project.yaml run --max-rounds 50
 ```
 
 ### 查看状态
