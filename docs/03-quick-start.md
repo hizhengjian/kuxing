@@ -204,16 +204,16 @@ python cli.py --config examples/hello-world.yaml show --history
 
 ## 常用命令速查
 
-| 命令 | 说明 |
-|------|------|
-| `python cli.py create-task -p "项目名"` | 交互式创建新任务 |
-| `python cli.py --config <file> init` | 初始化项目 |
-| `python cli.py run` | 运行任务（串行模式） |
-| `python cli.py run --loop` | 运行任务（循环模式） |
-| `python cli.py status` | 查看当前状态 |
-| `python cli.py resume` | 继续执行 |
-| `python cli.py show --history` | 显示历史记录 |
-| `python cli.py reset` | 重置状态 |
+| 命令                                   | 说明         |
+| ------------------------------------ | ---------- |
+| `python cli.py create-task -p "项目名"` | 交互式创建新任务   |
+| `python cli.py --config <file> init` | 初始化项目      |
+| `python cli.py run`                  | 运行任务（串行模式） |
+| `python cli.py run --loop`           | 运行任务（循环模式） |
+| `python cli.py status`               | 查看当前状态     |
+| `python cli.py resume`               | 继续执行       |
+| `python cli.py show --history`       | 显示历史记录     |
+| `python cli.py reset`                | 重置状态       |
 
 ---
 
