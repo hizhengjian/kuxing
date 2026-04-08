@@ -77,6 +77,63 @@ class Scheduler:
         # 状态
         self.state: Optional[SchedulerState] = None
 
+    def _recover_from_interrupt(self) -> None:
+        """
+        检测并修复中断后的不一致状态
+
+        可能的不一致状态：
+        1. 有任务处于 'running' 状态（上一轮被中断）
+        2. current_round 与实际 round 文件数量不匹配
+        """
+        issues_found = []
+
+        # 检查 1: 是否有任务处于 running 状态（上一轮被中断）
+        running_tasks = [
+            task_id for task_id, task in self.state.tasks.items()
+            if task.status == "running"
+        ]
+        if running_tasks:
+            issues_found.append(f"任务 {running_tasks} 处于 'running' 状态（上一轮被中断）")
+            # 将 running 状态的任务重置为 pending
+            for task_id in running_tasks:
+                self.state.tasks[task_id].status = "pending"
+                self.state.tasks[task_id].error_message = None
+            self.logger.warning(f"已自动恢复 {len(running_tasks)} 个被中断的任务")
+
+        # 检查 2: current_round 与实际 round 文件数量不匹配
+        actual_rounds = len(self.memory_store.load_rounds())
+        if self.state.current_round > actual_rounds:
+            issues_found.append(
+                f"current_round ({self.state.current_round}) > 实际轮次数 ({actual_rounds})"
+            )
+            # 以实际轮次为准，current_round 回退到实际值
+            self.state.current_round = actual_rounds
+            self.logger.warning(
+                f"已校正 current_round: {actual_rounds}（基于实际轮次文件）"
+            )
+
+        # 检查 3: 是否有 completed 的任务但 pending_tasks 中仍有它
+        for task_id, task in self.state.tasks.items():
+            if task.status in ("completed", "skipped", "failed"):
+                if task_id in self.state.pending_tasks:
+                    self.state.pending_tasks.remove(task_id)
+
+        # 检查 4: loop 模式下，检测 last_error 是否是中断相关
+        if self.state.mode == "loop" and self.state.last_error:
+            error_lower = self.state.last_error.lower()
+            if "keyboardinterrupt" in error_lower or "interrupt" in error_lower:
+                # 这是中断导致的错误，清除它
+                self.state.last_error = None
+                self.logger.info("已清除中断错误标记")
+
+        if issues_found:
+            print("\n⚠️  检测到中断后的不一致状态，已自动修复：")
+            for issue in issues_found:
+                print(f"  - {issue}")
+            print("  可以正常继续执行\n")
+        else:
+            print("状态检查通过，无不一致问题")
+
     def _setup_logger(self) -> None:
         """初始化日志系统"""
         # 创建日志目录
@@ -164,6 +221,10 @@ class Scheduler:
         if existing_state:
             print(f"发现已有状态，加载中...")
             self.state = existing_state
+
+            # ========== 中断恢复：检测并修复不一致状态 ==========
+            self._recover_from_interrupt()
+
             # 确保pending_tasks是最新的，且依赖都已满足
             self.state.pending_tasks = [
                 task_id for task_id, task in self.state.tasks.items()

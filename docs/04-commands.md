@@ -303,7 +303,7 @@ python cli.py resume --max-rounds 100
 
 ## reset - 重置所有状态
 
-清空执行历史和记忆，但保留配置。
+清空执行历史和记忆，但保留配置。**只重置一个项目**，由 `--config` 指定。
 
 ### 命令
 
@@ -315,17 +315,18 @@ kuxing reset [选项]
 
 | 选项 | 说明 |
 |------|------|
+| `--config <path>` | 配置文件路径（**必填**，指定要重置的项目） |
 | `--confirm` | 确认重置（防止误操作） |
 | `--clear-all` | 清空所有记忆（包括配置） |
 
 ### 示例
 
 ```bash
-# 重置轮次记忆（保留配置）
-python cli.py reset --confirm
+# 重置轮次记忆（保留配置）- 只重置指定项目
+python cli.py --config examples/update-kuxing-docs.yaml reset --confirm
 
-# 清空所有记忆（包括配置）
-python cli.py reset --confirm --clear-all
+# 清空所有记忆（包括配置）- 只清空指定项目
+python cli.py --config examples/update-kuxing-docs.yaml reset --confirm --clear-all
 ```
 
 ### 重置级别
@@ -334,6 +335,12 @@ python cli.py reset --confirm --clear-all
 |------|------|------|
 | `reset` | 配置 | 轮次历史、状态 |
 | `reset --clear-all` | 无 | 所有记忆 |
+
+### 作用域说明
+
+`reset` 命令只影响**一个项目**：
+- 使用 `--config` 指定项目配置文件
+- 不指定 `--config` 时，查找 memory 目录下最近的一个项目
 
 ---
 
