@@ -84,6 +84,7 @@
 | 案例执行工作流程图 | [images/example-workflow.svg](images/example-workflow.svg) | 案例执行的四个阶段（准备、执行、结果、恢复） |
 | 命令执行流程图 | [images/command-flow.svg](images/command-flow.svg) | 命令执行流程与关系，从初始化到执行、管理的完整命令链 |
 | 问题排查流程图 | [images/troubleshooting-flow.svg](images/troubleshooting-flow.svg) | 问题排查决策树，从遇到问题到解决问题的完整路径 |
+| 快速开始流程图 | [images/quick-start-flow.svg](images/quick-start-flow.svg) | 快速开始流程，从创建配置到运行任务的 5 个关键步骤 |
 
 详见 [images/README.md](images/README.md)。
 
