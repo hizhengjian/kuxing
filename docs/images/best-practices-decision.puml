@@ -1,0 +1,146 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+skinparam handwritten false
+skinparam shadowing false
+
+title 最佳实践决策树
+
+' 定义配色
+skinparam activity {
+    BackgroundColor<<start>> LightCyan
+    BackgroundColor<<project>> LightBlue
+    BackgroundColor<<config>> LightYellow
+    BackgroundColor<<memory>> LightGreen
+    BackgroundColor<<debug>> Pink
+    BackgroundColor<<perf>> Lavender
+}
+
+start
+
+:开始使用 kuxing;
+
+partition "**阶段1: 项目组织**" #LightCyan {
+    if (是否有多个项目?) then (是)
+        :使用独立目录管理\n每个项目一个配置文件;
+        note right
+        推荐结构:
+        projects/
+        ├── project-a/config.yaml
+        ├── project-b/config.yaml
+        └── project-c/config.yaml
+        end note
+    else (否)
+        :单项目简单结构\n配置文件放在项目根目录;
+    endif
+
+    :定义清晰的任务拆分;
+    note right
+    原则:
+    - 单一职责
+    - 粒度适中 (10-30分钟)
+    - 依赖明确
+    end note
+}
+
+partition "**阶段2: 配置优化**" #LightYellow {
+    if (任务类型?) then (循环执行)
+        :设置 max_rounds\n配置 check_interval;
+        note right
+        loop_config:
+          max_rounds: 100
+          check_interval: 30
+        end note
+    else (串行执行)
+        :按顺序定义任务\n使用 depends_on;
+        note right
+        tasks:
+          - name: task1
+          - name: task2
+            depends_on: [task1]
+        end note
+    endif
+
+    if (需要记忆管理?) then (是)
+        :启用 auto_memory_update\n设置 context_summary_lines;
+        note right
+        memory_config:
+          auto_memory_update: true
+          context_summary_lines: 50
+        end note
+    else (否)
+        :使用默认配置;
+    endif
+}
+
+partition "**阶段3: 记忆系统**" #LightGreen {
+    if (记忆层次?) then (会话级)
+        :使用 session.md\n记录临时信息;
+    elseif (项目级?) then (是)
+        :使用 project_memory.md\n记录项目知识;
+    else (全局级)
+        :使用 global_memory.md\n记录通用知识;
+    endif
+
+    :定期清理过期记忆;
+    note right
+    建议:
+    - 每周检查一次
+    - 删除无用记忆
+    - 合并重复记忆
+    end note
+}
+
+partition "**阶段4: 调试优化**" #Pink {
+    if (遇到问题?) then (是)
+        if (问题类型?) then (配置错误)
+            :检查 YAML 语法\n验证路径是否存在;
+        elseif (执行错误?) then (是)
+            :查看 state.json\n检查任务状态;
+        else (记忆问题)
+            :检查 MEMORY.md\n验证记忆加载;
+        endif
+    else (否)
+        :继续执行;
+    endif
+}
+
+partition "**阶段5: 性能优化**" #Lavender {
+    if (执行速度慢?) then (是)
+        :减少 context_summary_lines\n优化 prompt 长度;
+        note right
+        优化建议:
+        - context_summary_lines: 30
+        - 精简 prompt
+        - 减少不必要的记忆
+        end note
+    else (否)
+        :保持当前配置;
+    endif
+
+    if (记忆占用大?) then (是)
+        :启用记忆压缩\n定期清理;
+        note right
+        memory_config:
+          enable_compression: true
+          max_memory_size: 10MB
+        end note
+    else (否)
+        :继续使用;
+    endif
+}
+
+:完成配置优化;
+
+stop
+
+legend right
+    |= 颜色 |= 阶段 |
+    |<#LightCyan>| 项目组织 |
+    |<#LightYellow>| 配置优化 |
+    |<#LightGreen>| 记忆系统 |
+    |<#Pink>| 调试优化 |
+    |<#Lavender>| 性能优化 |
+endlegend
+
+@enduml

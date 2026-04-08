@@ -15,6 +15,7 @@
 | `command-flow.puml` | `command-flow.svg`, `command-flow.png` | 命令执行流程与关系图 | `04-commands.md` |
 | `troubleshooting-flow.puml` | `troubleshooting-flow.svg`, `troubleshooting-flow.png` | 问题排查流程图 | `08-troubleshooting.md` |
 | `quick-start-flow.puml` | `quick-start-flow.svg`, `quick-start-flow.png` | 快速开始流程图 | `03-quick-start.md` |
+| `best-practices-decision.puml` | `best-practices-decision.svg`, `best-practices-decision.png` | 最佳实践决策树 | `10-best-practices.md` |
 
 ## 快速更新图表
 
@@ -78,6 +79,11 @@ plantuml -tsvg -tpng *.puml
 **类型**: 活动图
 **内容**: 快速开始流程，展示从创建配置到运行任务的 5 个关键步骤
 **配色**: 创建配置（LightCyan）、初始化项目（LightBlue）、运行任务（LightGreen）、查看状态（LightYellow）、下一步（Pink）
+
+### 10. best-practices-decision.puml
+**类型**: 活动图（决策树）
+**内容**: 最佳实践决策流程，从项目组织到性能优化的完整决策路径
+**配色**: 项目组织（LightCyan）、配置优化（LightYellow）、记忆系统（LightGreen）、调试优化（Pink）、性能优化（Lavender）
 
 ## PlantUML 配色规范
 
