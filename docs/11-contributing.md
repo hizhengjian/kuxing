@@ -8,20 +8,35 @@
 
 ```
 kuxing/
-├── cli.py              # 主入口，命令行接口
-├── scheduler.py         # 任务调度器核心
-├── memory/             # 记忆系统目录
-│   ├── memory_manager.py    # 记忆管理器
-│   ├── session_memory.py    # 会话记忆
-│   ├── context_manager.py  # 上下文管理器
-│   └── memory_updater.py    # 记忆更新器
-├── config/              # 配置目录
-├── docs/                # 项目文档
-├── examples/            # 示例配置
-├── memory/              # 记忆存储目录
-│   └── <project-slug>/  # 按项目分组的记忆
-└── tests/               # 测试文件
+├── cli.py                 # 主入口，命令行接口
+├── scheduler.py           # 任务调度器核心
+├── memory_store.py        # 记忆存储管理器
+├── session_memory.py      # 会话记忆（结构化 session.md）
+├── memory_updater.py      # 记忆自动更新器
+├── llm_compressor.py      # LLM 上下文压缩器
+├── claude_invoker.py      # Claude API 调用器
+├── config_schema.py       # 配置 schema 验证
+├── prompts.py             # Prompt 模板管理
+├── state.py               # 状态管理
+├── task_queue.py          # 任务队列管理
+├── verify_v0.5.0.py      # v0.5.0 验证脚本
+├── docs/                  # 项目文档
+│   └── images/            # 文档图表（PlantUML 源文件）
+├── examples/              # 示例配置
+├── memory/                # 记忆存储目录（运行时生成）
+│   └── <project-slug>/    # 按项目分组的记忆
+├── shared_context/        # 全局共享记忆目录
+└── tests/                 # 测试文件
+    ├── conftest.py
+    ├── test_memory_store.py
+    ├── test_memory_updater.py
+    ├── test_prompts.py
+    ├── test_scheduler.py
+    ├── test_session_memory.py
+    └── test_task_queue.py
 ```
+
+**注意**：`memory/` 目录是运行时生成的记忆存储，不是 Python 模块。核心记忆模块以单个文件形式存在于项目根目录。
 
 ---
 
@@ -365,4 +380,4 @@ mkdocs serve
 
 ---
 
-**最后更新**: 2026-04-03
+**最后更新**: 2026-04-07
