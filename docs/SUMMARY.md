@@ -86,6 +86,8 @@
 | 问题排查流程图 | [images/troubleshooting-flow.svg](images/troubleshooting-flow.svg) | 问题排查决策树，从遇到问题到解决问题的完整路径 |
 | 快速开始流程图 | [images/quick-start-flow.svg](images/quick-start-flow.svg) | 快速开始流程，从创建配置到运行任务的 5 个关键步骤 |
 | 最佳实践决策树 | [images/best-practices-decision.svg](images/best-practices-decision.svg) | 最佳实践决策流程，从项目组织到性能优化的完整决策路径 |
+| 安装流程图 | [images/installation-flow.svg](images/installation-flow.svg) | 安装流程图，从环境检查到配置完成的完整安装流程（5个阶段） |
+| 贡献工作流程图 | [images/contributing-workflow.svg](images/contributing-workflow.svg) | 贡献工作流程图，从 Fork 仓库到 PR 合并的完整贡献流程（5个阶段） |
 
 详见 [images/README.md](images/README.md)。
 

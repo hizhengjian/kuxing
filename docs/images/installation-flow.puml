@@ -1,0 +1,143 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+
+title 安装流程图
+
+partition "**阶段1: 环境检查**" #LightCyan {
+    :检查 Python 版本;
+    note right #ADD8E6
+    要求:
+    - 最低: Python 3.8+
+    - 推荐: Python 3.10+
+    end note
+
+    if (Python 版本符合?) then (yes)
+        :✓ Python 环境就绪;
+    else (no)
+        :升级 Python;
+        note right #FFB6C1
+        Ubuntu/Debian:
+        sudo apt-get install python3.10
+
+        macOS:
+        brew install python@3.10
+        end note
+    endif
+}
+
+partition "**阶段2: 安装 Claude CLI**" #LightBlue {
+    :安装 Claude CLI;
+    note right #ADD8E6
+    使用 npm 安装:
+    npm install -g @anthropic-ai/claude-code
+    end note
+
+    :验证 Claude CLI;
+    note right #FFFACD
+    运行命令:
+    claude --version
+    end note
+
+    if (Claude CLI 可用?) then (yes)
+        :✓ Claude CLI 就绪;
+    else (no)
+        :检查 PATH 配置;
+        note right #FFB6C1
+        确保 npm 全局包在 PATH 中
+        end note
+    endif
+}
+
+partition "**阶段3: 安装苦行僧**" #LightGreen {
+    :选择安装方式;
+
+    if (安装方式?) then (下载 release)
+        :下载最新版本;
+        note right #ADD8E6
+        wget https://github.com/hizhengjian/kuxing/releases/latest/kuxing.tar.gz
+        end note
+        :解压文件;
+    elseif (从源码安装) then (yes)
+        :克隆仓库;
+        note right #ADD8E6
+        git clone https://github.com/hizhengjian/kuxing.git
+        end note
+        :安装依赖;
+        note right #ADD8E6
+        pip install -r requirements.txt
+        end note
+    else (直接使用)
+        :创建符号链接;
+        note right #ADD8E6
+        ln -s /path/to/kuxing/cli.py /usr/local/bin/kuxing
+        chmod +x /usr/local/bin/kuxing
+        end note
+    endif
+}
+
+partition "**阶段4: 验证安装**" #LightYellow {
+    :运行版本检查;
+    note right #FFFACD
+    python cli.py --version
+    end note
+
+    :查看可用命令;
+    note right #FFFACD
+    python cli.py --help
+    end note
+
+    if (命令正常运行?) then (yes)
+        :✓ 安装成功;
+    else (no)
+        :检查依赖;
+        note right #FFB6C1
+        检查项:
+        - Python 版本
+        - pyyaml 库
+        - Claude CLI
+        end note
+    endif
+}
+
+partition "**阶段5: 可选配置**" #Pink {
+    :配置环境变量;
+    note right #E0FFFF
+    创建 ~/.kuxing/env:
+    - ANTHROPIC_API_KEY
+    - SDK_PATH
+    - WORKSPACE
+    end note
+
+    :初始化全局记忆;
+    note right #E0FFFF
+    python cli.py init-context --global
+    end note
+
+    :✓ 配置完成;
+}
+
+:开始使用;
+note right #98FB98
+下一步:
+- 快速开始: docs/03-quick-start.md
+- 命令参考: docs/04-commands.md
+- 配置指南: docs/05-config-guide.md
+end note
+
+stop
+
+legend right
+    |= 颜色 |= 阶段 |
+    |<#LightCyan>| 环境检查 |
+    |<#LightBlue>| 安装 Claude CLI |
+    |<#LightGreen>| 安装苦行僧 |
+    |<#LightYellow>| 验证安装 |
+    |<#Pink>| 可选配置 |
+    |<#ADD8E6>| 配置信息 |
+    |<#FFFACD>| 关键命令 |
+    |<#FFB6C1>| 错误处理 |
+    |<#98FB98>| 成功完成 |
+endlegend
+
+@enduml

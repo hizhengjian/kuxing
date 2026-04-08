@@ -1,0 +1,174 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+
+title 贡献工作流程图
+
+partition "**阶段1: 准备工作**" #LightCyan {
+    :Fork 仓库;
+    note right #ADD8E6
+    在 GitHub 上 Fork:
+    https://github.com/hizhengjian/kuxing
+    end note
+
+    :克隆到本地;
+    note right #ADD8E6
+    git clone <your-fork-url>
+    cd kuxing
+    end note
+
+    :创建开发分支;
+    note right #FFFACD
+    git checkout -b feature/your-feature
+    或
+    git checkout -b fix/your-bugfix
+    end note
+
+    :配置开发环境;
+    note right #ADD8E6
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -e .
+    end note
+}
+
+partition "**阶段2: 开发与测试**" #LightGreen {
+    :编写代码;
+    note right #FFFACD
+    遵循 PEP 8 规范
+    添加类型注解
+    编写文档字符串
+    end note
+
+    :编写测试;
+    note right #FFFACD
+    测试覆盖率 ≥ 80%
+    使用 pytest
+    测试文件: tests/test_*.py
+    end note
+
+    :运行测试;
+    note right #ADD8E6
+    pytest tests/ -v
+    pytest tests/ --cov=. --cov-report=html
+    end note
+
+    if (测试通过?) then (yes)
+        :✓ 测试通过;
+    else (no)
+        :修复问题;
+        note right #FFB6C1
+        检查测试失败原因
+        修复代码或测试
+        end note
+        :运行测试;
+    endif
+
+    :代码格式检查;
+    note right #ADD8E6
+    black .
+    flake8 .
+    mypy .
+    end note
+}
+
+partition "**阶段3: 提交代码**" #LightYellow {
+    :暂存修改;
+    note right #ADD8E6
+    git add <files>
+    end note
+
+    :提交代码;
+    note right #FFFACD
+    提交信息格式:
+    <type>: <description>
+
+    类型:
+    - feat: 新功能
+    - fix: 修复
+    - docs: 文档
+    - test: 测试
+    - refactor: 重构
+    end note
+
+    :推送到 Fork;
+    note right #ADD8E6
+    git push origin feature/your-feature
+    end note
+}
+
+partition "**阶段4: 创建 Pull Request**" #Pink {
+    :创建 PR;
+    note right #FFFACD
+    在 GitHub 上创建 PR:
+    - 清晰的标题
+    - 详细的描述
+    - 关联的 Issue
+    - 测试说明
+    end note
+
+    :等待 Code Review;
+    note right #E0FFFF
+    维护者会审查代码:
+    - 代码质量
+    - 测试覆盖率
+    - 文档完整性
+    end note
+
+    if (需要修改?) then (yes)
+        :根据反馈修改;
+        note right #FFB6C1
+        在同一分支上修改
+        推送更新会自动更新 PR
+        end note
+        :推送更新;
+        :等待 Code Review;
+    else (no)
+        :✓ PR 被批准;
+    endif
+}
+
+partition "**阶段5: 合并与清理**" #Lavender {
+    :维护者合并 PR;
+    note right #98FB98
+    合并到 main 分支
+    自动关闭关联的 Issue
+    end note
+
+    :同步主仓库;
+    note right #ADD8E6
+    git remote add upstream <main-repo-url>
+    git fetch upstream
+    git checkout main
+    git merge upstream/main
+    end note
+
+    :删除本地分支;
+    note right #E0FFFF
+    git branch -d feature/your-feature
+    end note
+
+    :✓ 贡献完成;
+}
+
+:继续下一个贡献;
+note right #98FB98
+感谢您的贡献！
+end note
+
+stop
+
+legend right
+    |= 颜色 |= 阶段 |
+    |<#LightCyan>| 准备工作 |
+    |<#LightGreen>| 开发与测试 |
+    |<#LightYellow>| 提交代码 |
+    |<#Pink>| 创建 Pull Request |
+    |<#Lavender>| 合并与清理 |
+    |<#ADD8E6>| 配置信息 |
+    |<#FFFACD>| 关键步骤 |
+    |<#FFB6C1>| 错误处理 |
+    |<#98FB98>| 成功完成 |
+endlegend
+
+@enduml

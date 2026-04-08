@@ -16,6 +16,8 @@
 | `troubleshooting-flow.puml` | `troubleshooting-flow.svg`, `troubleshooting-flow.png` | 问题排查流程图 | `08-troubleshooting.md` |
 | `quick-start-flow.puml` | `quick-start-flow.svg`, `quick-start-flow.png` | 快速开始流程图 | `03-quick-start.md` |
 | `best-practices-decision.puml` | `best-practices-decision.svg`, `best-practices-decision.png` | 最佳实践决策树 | `10-best-practices.md` |
+| `installation-flow.puml` | `installation-flow.svg`, `installation-flow.png` | 安装流程图 | `02-installation.md` |
+| `contributing-workflow.puml` | `contributing-workflow.svg`, `contributing-workflow.png` | 贡献工作流程图 | `11-contributing.md` |
 
 ## 快速更新图表
 
@@ -84,6 +86,16 @@ plantuml -tsvg -tpng *.puml
 **类型**: 活动图（决策树）
 **内容**: 最佳实践决策流程，从项目组织到性能优化的完整决策路径
 **配色**: 项目组织（LightCyan）、配置优化（LightYellow）、记忆系统（LightGreen）、调试优化（Pink）、性能优化（Lavender）
+
+### 11. installation-flow.puml
+**类型**: 活动图
+**内容**: 安装流程图，展示从环境检查到配置完成的完整安装流程（5个阶段）
+**配色**: 环境检查（LightCyan）、安装 Claude CLI（LightBlue）、安装苦行僧（LightGreen）、验证安装（LightYellow）、可选配置（Pink）
+
+### 12. contributing-workflow.puml
+**类型**: 活动图
+**内容**: 贡献工作流程图，展示从 Fork 仓库到 PR 合并的完整贡献流程（5个阶段）
+**配色**: 准备工作（LightCyan）、开发与测试（LightGreen）、提交代码（LightYellow）、创建 Pull Request（Pink）、合并与清理（Lavender）
 
 ## PlantUML 配色规范
 
@@ -163,6 +175,9 @@ ls -la *.png
 ![命令执行流程图](./images/command-flow.svg)
 ![问题排查流程图](./images/troubleshooting-flow.svg)
 ![快速开始流程图](./images/quick-start-flow.svg)
+![最佳实践决策树](./images/best-practices-decision.svg)
+![安装流程图](./images/installation-flow.svg)
+![贡献工作流程图](./images/contributing-workflow.svg)
 ```
 
 ## 图表维护建议
