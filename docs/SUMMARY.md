@@ -81,6 +81,8 @@
 | 任务状态图 | [images/task-state.svg](images/task-state.svg) | 任务的完整生命周期状态机 |
 | 记忆层次交互图 | [images/memory-layers.svg](images/memory-layers.svg) | 五层记忆系统的架构和交互流程 |
 | 配置工作流程图 | [images/config-workflow.svg](images/config-workflow.svg) | 从创建配置到执行任务的完整流程 |
+| 案例执行工作流程图 | [images/example-workflow.svg](images/example-workflow.svg) | 案例执行的四个阶段（准备、执行、结果、恢复） |
+| 命令执行流程图 | [images/command-flow.svg](images/command-flow.svg) | 命令执行流程与关系，从初始化到执行、管理的完整命令链 |
 
 详见 [images/README.md](images/README.md)。
 

@@ -11,6 +11,8 @@
 | `task-state.puml` | `task-state.svg`, `task-state.png` | 任务执行流程与状态图 | `06-scheduler-architecture.md` |
 | `memory-layers.puml` | `memory-layers.svg`, `memory-layers.png` | 记忆层次交互图 | `07-memory-architecture.md` |
 | `config-workflow.puml` | `config-workflow.svg`, `config-workflow.png` | 配置工作流程图 | `05-config-guide.md` |
+| `example-workflow.puml` | `example-workflow.svg`, `example-workflow.png` | 案例执行工作流程图 | `09-examples.md` |
+| `command-flow.puml` | `command-flow.svg`, `command-flow.png` | 命令执行流程与关系图 | `04-commands.md` |
 
 ## 快速更新图表
 
@@ -54,6 +56,16 @@ plantuml -tsvg -tpng *.puml
 **类型**: 序列图
 **内容**: 从创建配置到执行任务的完整工作流程，包括配置验证、任务执行、状态恢复
 **配色**: 用户交互（标准）、系统组件（分层配色）
+
+### 6. example-workflow.puml
+**类型**: 活动图
+**内容**: 案例执行的完整工作流程，包括准备、执行、结果、恢复四个阶段
+**配色**: 准备（LightCyan）、执行（LightGreen）、结果（LightYellow）、恢复（Pink）
+
+### 7. command-flow.puml
+**类型**: 活动图
+**内容**: 命令执行流程与关系，展示从初始化到执行、管理的完整命令链
+**配色**: 初始化（LightCyan）、执行（LightGreen）、管理（LightYellow）、辅助工具（Pink）
 
 ## PlantUML 配色规范
 
@@ -129,6 +141,8 @@ ls -la *.png
 ![任务状态图](./images/task-state.svg)
 ![记忆层次交互图](./images/memory-layers.svg)
 ![配置工作流程图](./images/config-workflow.svg)
+![案例执行工作流程图](./images/example-workflow.svg)
+![命令执行流程图](./images/command-flow.svg)
 ```
 
 ## 图表维护建议

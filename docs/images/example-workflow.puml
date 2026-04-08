@@ -1,0 +1,94 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName SimSun
+
+title 案例执行工作流程
+
+partition "**准备阶段**" #LightCyan {
+    :编写配置文件;
+    note right
+    examples/my-task.yaml
+    - 定义任务列表
+    - 设置执行模式
+    - 配置记忆策略
+    end note
+
+    :验证配置;
+    note right
+    python cli.py --config examples/my-task.yaml run --dry-run
+    end note
+}
+
+partition "**执行阶段**" #LightGreen {
+    :启动任务;
+    note right
+    python cli.py --config examples/my-task.yaml run
+    end note
+
+    :Scheduler 初始化;
+    note right
+    - 加载配置
+    - 创建任务队列
+    - 初始化记忆系统
+    end note
+
+    :执行任务轮次;
+    note right
+    - 串行模式：逐个执行
+    - 并行模式：同时执行
+    - 循环模式：重复执行
+    end note
+
+    if (任务完成?) then (是)
+        :保存最终状态;
+    else (否)
+        if (达到最大轮次?) then (是)
+            :保存中断状态;
+        else (否)
+            :继续下一轮;
+            note right
+            - 更新记忆
+            - 生成下一轮提示
+            end note
+        endif
+    endif
+}
+
+partition "**结果阶段**" #LightYellow {
+    :查看执行结果;
+    note right
+    - 检查 memory/state.json
+    - 查看 memory/session.md
+    - 阅读 memory/MEMORY.md
+    end note
+
+    :分析执行日志;
+    note right
+    - 每轮执行的输出
+    - 错误信息（如有）
+    - 性能统计
+    end note
+}
+
+partition "**恢复阶段**" #Pink {
+    if (需要继续?) then (是)
+        :恢复执行;
+        note right
+        python cli.py --config examples/my-task.yaml resume
+        end note
+    else (否)
+        :任务完成;
+    endif
+}
+
+stop
+
+legend right
+    |= 颜色 |= 阶段 |
+    |<#LightCyan>| 准备阶段 |
+    |<#LightGreen>| 执行阶段 |
+    |<#LightYellow>| 结果阶段 |
+    |<#Pink>| 恢复阶段 |
+endlegend
+
+@enduml

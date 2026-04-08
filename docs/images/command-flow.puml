@@ -1,0 +1,129 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+
+title 命令执行流程与关系
+
+' 定义配色
+skinparam activity {
+    BackgroundColor<<init>> LightCyan
+    BackgroundColor<<exec>> LightGreen
+    BackgroundColor<<manage>> LightYellow
+    BackgroundColor<<query>> Pink
+}
+
+start
+
+partition "**初始化阶段**" #LightCyan {
+    :用户准备配置文件;
+    note right
+    创建 config.yaml
+    定义任务参数
+    end note
+
+    if (需要初始化项目?) then (yes)
+        :执行 init 命令;
+        note right
+        python cli.py --config config.yaml init
+        - 创建 memory/ 目录
+        - 保存配置副本
+        end note
+    else (no)
+        :跳过初始化;
+    endif
+
+    if (需要记忆模板?) then (yes)
+        :执行 init-context 命令;
+        note right
+        python cli.py --config config.yaml init-context
+        - 创建 MEMORY.md
+        - 创建记忆模板文件
+        end note
+    else (no)
+        :跳过模板初始化;
+    endif
+}
+
+partition "**执行阶段**" #LightGreen {
+    if (执行模式?) then (单项目)
+        :执行 run 命令;
+        note right
+        python cli.py --config config.yaml run
+        - 加载配置
+        - 启动调度器
+        - 循环执行任务
+        end note
+    else (多项目)
+        :执行 parallel 命令;
+        note right
+        python cli.py parallel --configs config1.yaml config2.yaml
+        - 并行执行多个项目
+        - 独立记忆空间
+        end note
+    endif
+
+    if (执行中断?) then (yes)
+        :保存状态到 state.json;
+        note right
+        自动保存：
+        - 当前轮次
+        - 任务队列
+        - 执行历史
+        end note
+
+        :执行 resume 命令;
+        note right
+        python cli.py --config config.yaml resume
+        - 从 state.json 恢复
+        - 继续执行
+        end note
+    else (no)
+        :正常完成;
+    endif
+}
+
+partition "**管理阶段**" #LightYellow {
+    fork
+        :执行 status 命令;
+        note right
+        python cli.py --config config.yaml status
+        - 查看当前状态
+        - 显示执行进度
+        end note
+    fork again
+        :执行 show 命令;
+        note right
+        python cli.py --config config.yaml show
+        - 查看历史记录
+        - 显示知识沉淀
+        end note
+    fork again
+        :执行 reset 命令;
+        note right
+        python cli.py --config config.yaml reset
+        - 清空状态
+        - 重新开始
+        end note
+    end fork
+}
+
+partition "**辅助工具**" #Pink {
+    :执行 create-task 命令;
+    note right
+    python cli.py create-task
+    - 交互式创建配置
+    - 自动生成 YAML
+    end note
+}
+
+stop
+
+legend right
+    |= 颜色 |= 阶段 |
+    |<#LightCyan>| 初始化阶段 |
+    |<#LightGreen>| 执行阶段 |
+    |<#LightYellow>| 管理阶段 |
+    |<#Pink>| 辅助工具 |
+endlegend
+
+@enduml
