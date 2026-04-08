@@ -13,6 +13,7 @@
 | `config-workflow.puml` | `config-workflow.svg`, `config-workflow.png` | 配置工作流程图 | `05-config-guide.md` |
 | `example-workflow.puml` | `example-workflow.svg`, `example-workflow.png` | 案例执行工作流程图 | `09-examples.md` |
 | `command-flow.puml` | `command-flow.svg`, `command-flow.png` | 命令执行流程与关系图 | `04-commands.md` |
+| `troubleshooting-flow.puml` | `troubleshooting-flow.svg`, `troubleshooting-flow.png` | 问题排查流程图 | `08-troubleshooting.md` |
 
 ## 快速更新图表
 
@@ -66,6 +67,11 @@ plantuml -tsvg -tpng *.puml
 **类型**: 活动图
 **内容**: 命令执行流程与关系，展示从初始化到执行、管理的完整命令链
 **配色**: 初始化（LightCyan）、执行（LightGreen）、管理（LightYellow）、辅助工具（Pink）
+
+### 8. troubleshooting-flow.puml
+**类型**: 活动图（决策树）
+**内容**: 问题排查流程，从遇到问题到解决问题的完整决策路径
+**配色**: 安装问题（LightCyan）、配置问题（LightYellow）、执行问题（LightGreen）、记忆问题（Pink）、性能问题（Lavender）
 
 ## PlantUML 配色规范
 
@@ -143,6 +149,7 @@ ls -la *.png
 ![配置工作流程图](./images/config-workflow.svg)
 ![案例执行工作流程图](./images/example-workflow.svg)
 ![命令执行流程图](./images/command-flow.svg)
+![问题排查流程图](./images/troubleshooting-flow.svg)
 ```
 
 ## 图表维护建议

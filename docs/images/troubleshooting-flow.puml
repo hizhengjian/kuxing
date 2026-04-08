@@ -1,0 +1,152 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+
+title 问题排查流程图
+
+' 定义配色
+skinparam activity {
+    BackgroundColor<<install>> LightCyan
+    BackgroundColor<<config>> LightYellow
+    BackgroundColor<<execute>> LightGreen
+    BackgroundColor<<memory>> Pink
+    BackgroundColor<<performance>> Lavender
+}
+
+start
+
+:遇到问题;
+
+if (能否启动 CLI?) then (否)
+    partition "**安装问题排查**" #LightCyan {
+        if (Python 版本 >= 3.8?) then (否)
+            :升级 Python 到 3.8+;
+            stop
+        else (是)
+            if (Claude CLI 已安装?) then (否)
+                :安装 Claude CLI;
+                :npm install -g @anthropic-ai/claude-code;
+                stop
+            else (是)
+                if (依赖安装成功?) then (否)
+                    :使用国内镜像重新安装;
+                    :pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple;
+                    stop
+                else (是)
+                    :检查环境变量配置;
+                    stop
+                endif
+            endif
+        endif
+    }
+else (是)
+    if (配置文件加载失败?) then (是)
+        partition "**配置问题排查**" #LightYellow {
+            if (YAML 格式正确?) then (否)
+                :修复 YAML 格式;
+                note right
+                常见问题:
+                - 使用空格缩进（不要用 Tab）
+                - 特殊字符加引号
+                - 检查键名是否重复
+                end note
+                stop
+            else (是)
+                if (任务依赖有循环?) then (是)
+                    :移除循环依赖;
+                    :使用 --dry-run 验证;
+                    stop
+                else (否)
+                    if (执行模式有效?) then (否)
+                        :修正为 serial/parallel/loop;
+                        stop
+                    else (是)
+                        if (路径存在?) then (否)
+                            :创建缺失的目录;
+                            :mkdir -p <path>;
+                            stop
+                        else (是)
+                            :检查其他配置项;
+                            stop
+                        endif
+                    endif
+                endif
+            endif
+        }
+    else (否)
+        if (任务执行失败?) then (是)
+            partition "**执行问题排查**" #LightGreen {
+                if (--max-rounds 不生效?) then (是)
+                    :检查参数位置;
+                    note right
+                    正确: python cli.py --config file.yaml run --max-rounds 5
+                    错误: python cli.py run --config file.yaml --max-rounds 5
+                    end note
+                    stop
+                else (否)
+                    if (串行模式顺序错误?) then (是)
+                        :检查 depends_on 配置;
+                        :确保依赖关系正确;
+                        stop
+                    else (否)
+                        if (并行模式全部失败?) then (是)
+                            :检查共享资源冲突;
+                            :添加资源锁或改为串行;
+                            stop
+                        else (否)
+                            if (循环模式无法停止?) then (是)
+                                :检查停止条件;
+                                :设置 max_rounds 限制;
+                                stop
+                            else (否)
+                                :查看详细错误日志;
+                                :logs/<task_name>.log;
+                                stop
+                            endif
+                        endif
+                    endif
+                endif
+            }
+        else (否)
+            if (记忆系统问题?) then (是)
+                partition "**记忆问题排查**" #Pink {
+                    if (记忆未加载?) then (是)
+                        :检查 MEMORY.md 索引;
+                        :验证记忆文件路径;
+                        stop
+                    else (否)
+                        if (记忆冲突?) then (是)
+                            :检查优先级设置;
+                            :轮次 > 会话 > 项目 > 全局;
+                            stop
+                        else (否)
+                            :检查记忆文件格式;
+                            stop
+                        endif
+                    endif
+                }
+            else (否)
+                partition "**性能问题排查**" #Lavender {
+                    if (执行速度慢?) then (是)
+                        :优化 Prompt 长度;
+                        :减少记忆加载量;
+                        :使用并行模式;
+                        stop
+                    else (否)
+                        if (内存占用高?) then (是)
+                            :启用 LLM 压缩;
+                            :减少 max_rounds;
+                            :清理旧日志;
+                            stop
+                        else (否)
+                            :查看文档其他章节;
+                            stop
+                        endif
+                    endif
+                }
+            endif
+        endif
+    endif
+endif
+
+@enduml
