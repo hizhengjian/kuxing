@@ -59,7 +59,7 @@ claude --version
 
 ```bash
 # 下载最新版本
-wget https://github.com/your-repo/kuxing/releases/latest/kuxing.tar.gz
+wget https://github.com/hizhengjian/kuxing/releases/latest/kuxing.tar.gz
 
 # 解压
 tar -xzf kuxing.tar.gz
@@ -70,7 +70,7 @@ cd kuxing
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-repo/kuxing.git
+git clone https://github.com/hizhengjian/kuxing.git
 cd kuxing
 
 # 安装依赖
@@ -235,4 +235,8 @@ rm /usr/local/bin/kuxing
 
 - [快速开始](./03-quick-start.md) - 5 分钟快速上手
 - [命令参考](./04-commands.md) - 完整命令文档
+
+---
+
+**最后更新**：2026-04-08
 - [配置指南](./05-config-guide.md) - YAML 配置详解

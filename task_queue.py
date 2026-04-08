@@ -126,6 +126,10 @@ class LoopQueue(TaskQueue):
         self.first_task_id = first_task_id  # 第一轮执行这个任务
         self.first_round_done = False  # 标记第一轮是否完成
 
+    def set_max_rounds(self, max_rounds: int):
+        """运行时更新最大轮次限制（用于命令行参数覆盖配置文件）"""
+        self.max_rounds = max_rounds
+
     def get_next_task(self, state: SchedulerState) -> Optional[str]:
         """每次都返回循环任务ID"""
         # 第一轮：如果还没有执行过first_task_id，返回它

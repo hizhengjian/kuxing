@@ -1,0 +1,71 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+
+title 配置文件工作流程
+
+actor 用户 as User
+participant "CLI" as CLI
+participant "ConfigLoader" as Loader
+participant "Scheduler" as Scheduler
+database "config.yaml" as Config
+database "memory/" as Memory
+
+== 1. 创建配置 ==
+User -> CLI: create-task
+CLI -> Config: 生成模板
+Config --> User: config.yaml
+
+note right of Config
+基本结构:
+- project_name
+- project_path
+- mode (serial/parallel/loop)
+- tasks[]
+end note
+
+== 2. 编辑配置 ==
+User -> Config: 编辑 config.yaml
+note right of User
+配置任务:
+- id, description
+- prompt_template
+- expected_output
+- depends_on (可选)
+end note
+
+== 3. 验证配置 ==
+User -> CLI: --config config.yaml run --dry-run
+CLI -> Loader: 加载配置
+Loader -> Loader: 验证字段
+alt 配置有效
+    Loader --> CLI: ✓ 配置有效
+    CLI --> User: 显示执行计划
+else 配置无效
+    Loader --> CLI: ✗ 错误信息
+    CLI --> User: 显示错误
+    User -> Config: 修复配置
+end
+
+== 4. 执行任务 ==
+User -> CLI: --config config.yaml run
+CLI -> Loader: 加载配置
+Loader -> Scheduler: 创建调度器
+Scheduler -> Memory: 初始化记忆
+Memory --> Scheduler: 记忆就绪
+
+loop 每个任务
+    Scheduler -> Scheduler: 执行任务
+    Scheduler -> Memory: 更新记忆
+end
+
+Scheduler --> CLI: 执行完成
+CLI --> User: 显示结果
+
+== 5. 恢复执行 ==
+User -> CLI: resume --project-name xxx
+CLI -> Memory: 加载状态
+Memory --> Scheduler: 恢复上下文
+Scheduler -> Scheduler: 继续执行
+
+@enduml

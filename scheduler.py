@@ -11,7 +11,7 @@ from pathlib import Path
 from state import SchedulerState, RoundState, TaskState
 from memory_store import MemoryStore
 from config_schema import SchedulerConfig, load_config, create_tasks_state
-from task_queue import create_queue, TaskQueue
+from task_queue import create_queue, TaskQueue, LoopQueue
 from claude_invoker import ClaudeInvoker, InvokeResult
 from prompts import build_task_prompt, PromptBuilder, extract_result_from_output
 from memory_updater import MemoryUpdater
@@ -533,12 +533,14 @@ class Scheduler:
 
         return summary
 
-    def run_loop_mode(self, max_rounds: int = 100) -> dict:
+    def run_loop_mode(self, max_rounds: Optional[int] = None) -> dict:
         """
         循环模式执行
 
         Args:
             max_rounds: 最大轮次限制（不含first_task）
+                       如果为 None，使用配置文件中的值
+                       如果指定，覆盖配置文件中的值
 
         Returns:
             执行摘要字典
@@ -549,6 +551,19 @@ class Scheduler:
         if self.state.mode != "loop":
             raise RuntimeError("只能在loop模式下调用run_loop_mode()")
 
+        # 如果命令行指定了 max_rounds，覆盖队列的配置
+        if max_rounds is not None:
+            if isinstance(self.queue, LoopQueue):
+                self.queue.set_max_rounds(max_rounds)
+                self.logger.info(f"使用命令行参数覆盖最大轮次: {max_rounds}")
+        else:
+            # 使用配置文件中的值
+            if isinstance(self.queue, LoopQueue):
+                max_rounds = self.queue.max_rounds
+                self.logger.info(f"使用配置文件中的最大轮次: {max_rounds}")
+            else:
+                max_rounds = 100  # 兜底默认值
+
         self.logger.info(f"\n开始循环执行，最多 {max_rounds} 轮...")
         self.logger.info(f"停止条件: {self.config.loop_config.stop_condition or '无'}")
 
@@ -557,6 +572,7 @@ class Scheduler:
 
         # 先执行 first_task（如果配置了且还没执行过）
         first_task_id = getattr(self.config.loop_config, 'first_task_id', None)
+        first_task_executed = False
         if first_task_id and self.state.current_round == 0:
             self.logger.info(f"\n执行首轮任务: {first_task_id}")
             # 直接执行首轮任务，不通过队列
@@ -565,6 +581,7 @@ class Scheduler:
                 task.status = "running"
                 self.state.current_round += 1
                 round_num = self.state.current_round
+                first_task_executed = True
                 self._log_round_start(round_num, task.description)
 
                 # 构建prompt（首轮任务不使用context_summary）
@@ -636,9 +653,14 @@ class Scheduler:
             if match:
                 stop_n = int(match.group(1))
 
+        # 计算主循环的起始轮次（如果执行了first_task，则从1开始计数）
+        loop_start_round = 1 if first_task_executed else 0
+
         # 主循环
         while self.queue.should_continue(self.state):
-            if self.state.current_round >= max_rounds:
+            # 修正：max_rounds 表示主循环的轮次（不含first_task）
+            loop_rounds_executed = self.state.current_round - loop_start_round
+            if loop_rounds_executed >= max_rounds:
                 self.logger.info(f"\n达到最大轮次限制 ({max_rounds})，停止")
                 break
 

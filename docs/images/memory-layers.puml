@@ -1,0 +1,104 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName Microsoft YaHei
+
+title 记忆层次交互图
+
+' 定义配色
+skinparam component {
+    BackgroundColor<<session>> LightBlue
+    BackgroundColor<<project>> LightGreen
+    BackgroundColor<<global>> LightYellow
+    BackgroundColor<<rounds>> Pink
+    BackgroundColor<<knowledge>> LightCyan
+}
+
+package "记忆层次系统" {
+
+    [MEMORY.md\n记忆索引] as index <<session>>
+
+    package "高优先级记忆" {
+        [session.md\n会话记忆\n(10个section)] as session <<session>>
+        [context.md\n项目私有记忆] as project <<project>>
+    }
+
+    package "共享记忆" {
+        [shared_context/\ncontext.md\n全局共享记忆] as global <<global>>
+    }
+
+    package "历史记忆" {
+        [rounds/\nround_*.json\n轮次记忆] as rounds <<rounds>>
+        [knowledge_base.md\n知识沉淀] as knowledge <<knowledge>>
+    }
+}
+
+' Scheduler 组件
+actor "Scheduler" as scheduler
+actor "MemoryStore" as store
+
+' 交互流程
+scheduler --> index : 1. 读取索引
+index --> session : 2. 加载会话记忆
+index --> project : 3. 加载项目记忆
+index --> global : 4. 加载全局记忆
+
+scheduler --> session : 5. 更新当前状态
+scheduler --> rounds : 6. 保存轮次记录
+
+session --> knowledge : 7. 提取学习总结
+store --> index : 8. 更新索引
+
+note right of session
+  **会话记忆 (session.md)**
+  - 执行标题
+  - 当前状态 ←─ 每轮更新
+  - 任务规格
+  - 关键文件 ←─ 自动添加
+  - 工作流程
+  - 错误与修正
+  - 代码库文档
+  - 学习总结 ←─ 自动提取
+  - 关键结果
+  - 工作日志 ←─ 每轮追加
+end note
+
+note right of project
+  **项目私有记忆**
+  - SDK 路径配置
+  - 参考文档路径
+  - 项目特定信息
+  - 已知问题和特殊处理
+end note
+
+note left of global
+  **全局共享记忆**
+  - 环境变量 (${VAR_NAME})
+  - 跨项目共享配置
+  - 账号信息
+end note
+
+note left of rounds
+  **轮次记忆**
+  - 每轮完整输入输出
+  - Claude 调用记录
+  - 执行结果
+end note
+
+note left of knowledge
+  **知识沉淀**
+  - 历史发现
+  - 最佳实践
+  - 避坑指南
+  - 经验总结
+end note
+
+legend right
+    |= 颜色 |= 记忆类型 |= 优先级 |
+    |<#LightBlue>| 会话记忆 | ★★★★★ |
+    |<#LightGreen>| 项目记忆 | ★★★★☆ |
+    |<#LightYellow>| 全局记忆 | ★★★☆☆ |
+    |<#Pink>| 轮次记忆 | ★★☆☆☆ |
+    |<#LightCyan>| 知识沉淀 | ★☆☆☆☆ |
+endlegend
+
+@enduml

@@ -79,6 +79,8 @@
 | 调度器执行序列图 | [images/scheduler-sequence.svg](images/scheduler-sequence.svg) | Scheduler 与组件的完整交互流程 |
 | 系统上下文图 | [images/system-context.svg](images/system-context.svg) | kuxing 与外部系统的交互关系（C4 风格） |
 | 任务状态图 | [images/task-state.svg](images/task-state.svg) | 任务的完整生命周期状态机 |
+| 记忆层次交互图 | [images/memory-layers.svg](images/memory-layers.svg) | 五层记忆系统的架构和交互流程 |
+| 配置工作流程图 | [images/config-workflow.svg](images/config-workflow.svg) | 从创建配置到执行任务的完整流程 |
 
 详见 [images/README.md](images/README.md)。
 
@@ -94,12 +96,14 @@
 
 ## 版本信息
 
-- **当前版本**: 0.5.0
-- **发布日期**: 2026-04-03
-- **主要更新**: 结构化会话记忆、记忆索引、自动记忆更新
+- **当前版本**: 0.5.1
+- **发布日期**: 2026-04-08
+- **主要更新**: 
+  - v0.5.1: 修复命令行参数 `--max-rounds` 无法覆盖配置文件的问题
+  - v0.5.0: 结构化会话记忆、记忆索引、自动记忆更新
 
 详见 [CHANGELOG.md](../CHANGELOG.md)。
 
 ---
 
-**最后更新**: 2026-04-07
+**最后更新**: 2026-04-08

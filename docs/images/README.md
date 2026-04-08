@@ -9,6 +9,8 @@
 | `scheduler-sequence.puml` | `scheduler-sequence.svg`, `scheduler-sequence.png` | 调度器执行序列图 | `06-scheduler-architecture.md` |
 | `system-context.puml` | `system-context.svg`, `system-context.png` | 系统上下文图（C4 风格） | `01-overview.md` |
 | `task-state.puml` | `task-state.svg`, `task-state.png` | 任务执行流程与状态图 | `06-scheduler-architecture.md` |
+| `memory-layers.puml` | `memory-layers.svg`, `memory-layers.png` | 记忆层次交互图 | `07-memory-architecture.md` |
+| `config-workflow.puml` | `config-workflow.svg`, `config-workflow.png` | 配置工作流程图 | `05-config-guide.md` |
 
 ## 快速更新图表
 
@@ -42,6 +44,16 @@ plantuml -tsvg -tpng *.puml
 **类型**: 状态图
 **内容**: 任务在队列、执行、等待、完成的完整生命周期
 **配色**: 等待（Pink）、执行（LightGreen）、完成（LightBlue）
+
+### 4. memory-layers.puml
+**类型**: 组件交互图
+**内容**: 五层记忆系统（会话记忆、项目记忆、全局记忆、轮次记忆、知识沉淀）的架构和交互流程
+**配色**: 会话（LightBlue）、项目（LightGreen）、全局（LightYellow）、轮次（Pink）、知识（LightCyan）
+
+### 5. config-workflow.puml
+**类型**: 序列图
+**内容**: 从创建配置到执行任务的完整工作流程，包括配置验证、任务执行、状态恢复
+**配色**: 用户交互（标准）、系统组件（分层配色）
 
 ## PlantUML 配色规范
 
@@ -115,6 +127,8 @@ ls -la *.png
 ![调度器执行序列图](./images/scheduler-sequence.svg)
 ![系统上下文图](./images/system-context.svg)
 ![任务状态图](./images/task-state.svg)
+![记忆层次交互图](./images/memory-layers.svg)
+![配置工作流程图](./images/config-workflow.svg)
 ```
 
 ## 图表维护建议
@@ -126,5 +140,5 @@ ls -la *.png
 
 ---
 
-**最后更新**: 2026-04-07
+**最后更新**: 2026-04-08
 **维护建议**: 修改图表前先阅读源文件理解结构，修改后重新生成确保显示正确

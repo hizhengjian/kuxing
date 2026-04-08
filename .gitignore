@@ -36,3 +36,11 @@ env/
 
 # 工作任务配置（机器特定）
 examples/claude-code-doc-update.yaml
+
+# Claude Code 工作目录
+.claude/
+
+# 测试文件和视频
+test_integration_max_rounds.py
+test_max_rounds_fix.py
+*.mp4

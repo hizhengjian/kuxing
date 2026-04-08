@@ -716,7 +716,7 @@ def main():
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 0.1.0"
+        version="%(prog)s 0.5.1"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="子命令")
@@ -777,8 +777,8 @@ def main():
     run_parser.add_argument(
         "--max-rounds",
         type=int,
-        default=50,
-        help="最大轮次限制 (默认: 50)"
+        default=None,
+        help="最大轮次限制 (默认: 使用配置文件中的值)"
     )
 
     # status 子命令
@@ -795,8 +795,8 @@ def main():
     resume_parser.add_argument(
         "--max-rounds",
         type=int,
-        default=50,
-        help="最大轮次限制 (默认: 50)"
+        default=None,
+        help="最大轮次限制 (默认: 使用配置文件中的值)"
     )
 
     # reset 子命令

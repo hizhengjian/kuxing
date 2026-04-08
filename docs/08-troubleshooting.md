@@ -192,7 +192,51 @@ project_path: "../my-project"
 
 ## 执行问题
 
-### 8. 任务执行失败
+### 8. 命令行参数 --max-rounds 不生效
+
+**问题描述**：用户通过命令行传入 `--max-rounds 100`，但实际运行时仍然按照 YAML 配置文件中的 `max_rounds: 50` 执行。
+
+**原因**：
+1. `LoopQueue` 在初始化时从 YAML 配置读取 `max_rounds`
+2. `LoopQueue.should_continue()` 方法使用 `self.max_rounds` 进行轮次检查
+3. 命令行参数传给了 `scheduler.run_loop_mode(max_rounds=100)`，但 `LoopQueue` 已经用 YAML 的值初始化，无法覆盖
+
+**解决方案**（v0.5.1 已修复）：
+
+从 v0.5.1 版本开始，命令行参数 `--max-rounds` 可以正确覆盖配置文件中的值。
+
+**使用示例**：
+
+```bash
+# 场景 1: 使用配置文件的值
+# YAML 配置: max_rounds: 50
+python cli.py --config examples/my-task.yaml run
+
+# 输出:
+# 使用配置文件中的最大轮次: 50
+# 开始循环执行，最多 50 轮...
+
+# 场景 2: 命令行参数覆盖
+# YAML 配置: max_rounds: 50
+python cli.py --config examples/my-task.yaml run --max-rounds 100
+
+# 输出:
+# 使用命令行参数覆盖最大轮次: 100
+# 开始循环执行，最多 100 轮...
+```
+
+**技术细节**：
+
+修复涉及三个文件：
+1. `task_queue.py` - 添加 `set_max_rounds()` 方法
+2. `cli.py` - 修改 `--max-rounds` 默认值为 `None`（区分用户是否传参）
+3. `scheduler.py` - 添加参数覆盖逻辑
+
+**向后兼容性**：✅ 完全向后兼容，旧的使用方式仍然有效。
+
+---
+
+### 9. 任务执行失败
 
 **错误信息**：
 ```
@@ -234,7 +278,49 @@ npm run build
 
 ---
 
-### 9. 串行模式任务未按顺序执行
+### 9. 任务执行失败
+
+**错误信息**：
+```
+Task task_name failed with exit code 1
+```
+
+**排查步骤**：
+
+1. **查看详细日志**：
+```bash
+# 查看最近一次执行的日志
+python cli.py status --project-name "项目名" --verbose
+
+# 查看特定轮次的日志
+python cli.py show --project-name "项目名" --round 5
+```
+
+2. **检查任务命令是否正确**：
+```yaml
+tasks:
+  - name: build
+    command: "npm run build"  # 确保命令存在且可执行
+```
+
+3. **检查工作目录**：
+```yaml
+tasks:
+  - name: build
+    command: "npm run build"
+    working_dir: "/home/user/project"  # 确保路径正确
+```
+
+4. **检查环境变量**：
+```bash
+# 在项目目录执行命令测试
+cd /path/to/project
+npm run build
+```
+
+---
+
+### 10. 串行模式任务未按顺序执行
 
 **原因**：可能配置了 `parallel: true` 而非 `serial` 模式。
 
@@ -251,7 +337,24 @@ tasks:
 
 ---
 
-### 10. 并行模式任务同时失败
+### 10. 串行模式任务未按顺序执行
+
+**原因**：可能配置了 `parallel: true` 而非 `serial` 模式。
+
+**解决方案**：
+```yaml
+# 确保使用 serial 模式
+execution_mode: serial
+
+# 或者显式设置 parallel: false
+tasks:
+  - name: task1
+    parallel: false
+```
+
+---
+
+### 11. 并行模式任务同时失败
 
 **错误信息**：
 ```
@@ -276,7 +379,32 @@ parallel_config:
 
 ---
 
-### 11. 循环模式无法停止
+### 11. 并行模式任务同时失败
+
+**错误信息**：
+```
+Multiple tasks failed simultaneously in parallel mode
+```
+
+**排查**：
+1. 检查网络连接
+2. 检查资源限制（内存、CPU）
+3. 查看各个任务的独立日志
+
+**解决方案**：
+```yaml
+# 使用串行模式调试
+execution_mode: serial
+
+# 或限制并行度
+execution_mode: parallel
+parallel_config:
+  max_parallel: 2  # 限制同时执行的任务数
+```
+
+---
+
+### 12. 循环模式无法停止
 
 **错误信息**：
 ```
@@ -304,7 +432,35 @@ loop_config:
 
 ---
 
-### 12. Claude CLI 调用失败
+### 12. 循环模式无法停止
+
+**错误信息**：
+```
+Loop mode keeps running, stop_condition not met
+```
+
+**排查**：
+1. 检查 `stop_condition` 配置
+2. 检查 `max_rounds` 限制
+3. 查看任务状态
+
+**解决方案**：
+```bash
+# 手动停止
+Ctrl+C
+
+# 或使用 reset 命令重置状态
+python cli.py reset --project-name "项目名"
+
+# 确保配置了合理的停止条件
+loop_config:
+  max_rounds: 100
+  stop_condition: "all_tasks_completed"  # 或 "goal_achieved"
+```
+
+---
+
+### 13. Claude CLI 调用失败
 
 **错误信息**：
 ```
@@ -331,7 +487,34 @@ export HTTPS_PROXY=http://proxy:8080
 
 ---
 
-### 13. 上下文窗口溢出
+### 13. Claude CLI 调用失败
+
+**错误信息**：
+```
+Error: Failed to invoke Claude CLI: connection timeout
+```
+
+**原因**：网络问题或 Claude API 不可用。
+
+**解决方案**：
+```bash
+# 1. 检查网络连接
+ping api.anthropic.com
+
+# 2. 检查 Claude CLI 状态
+claude --version
+claude auth
+
+# 3. 设置更长的超时时间
+export CLAUDE_TIMEOUT=120
+
+# 4. 使用代理（如果需要）
+export HTTPS_PROXY=http://proxy:8080
+```
+
+---
+
+### 14. 上下文窗口溢出
 
 **错误信息**：
 ```
@@ -372,7 +555,7 @@ cat shared_context/context.md | wc -c
 
 ## 记忆系统问题
 
-### 14. 记忆文件丢失
+### 15. 记忆文件丢失
 
 **错误信息**：
 ```
@@ -400,7 +583,7 @@ python cli.py init --project-name "项目名"
 
 ---
 
-### 15. MEMORY.md 索引过期
+### 16. MEMORY.md 索引过期
 
 **问题**：MEMORY.md 内容与实际记忆文件不同步。
 
@@ -425,7 +608,7 @@ ls -la memory/project_name/
 
 ---
 
-### 16. 会话记忆结构不完整
+### 17. 会话记忆结构不完整
 
 **问题**：session.md 缺少必要的 section。
 
@@ -454,7 +637,7 @@ python cli.py update-memory --project-name "项目名"
 
 ---
 
-### 17. 自动记忆更新失败
+### 18. 自动记忆更新失败
 
 **错误信息**：
 ```
@@ -477,7 +660,7 @@ chmod 644 memory/project_name/*.md
 
 ## 性能问题
 
-### 18. 执行速度慢
+### 19. 执行速度慢
 
 **排查**：
 
@@ -505,7 +688,7 @@ parallel_config:
 
 ---
 
-### 19. 内存占用过高
+### 20. 内存占用过高
 
 **错误信息**：
 ```
@@ -540,7 +723,7 @@ python cli.py reset --project-name "项目名" --keep-rounds 20
 
 ---
 
-### 20. 磁盘空间不足
+### 21. 磁盘空间不足
 
 **排查**：
 ```bash
@@ -572,7 +755,7 @@ find memory/ -name "knowledge_base.md" -size +1M -exec truncate -s 500K {} \;
 
 ## 高级问题
 
-### 21. 配置验证失败
+### 22. 配置验证失败
 
 **错误信息**：
 ```
@@ -593,7 +776,7 @@ python -c "import yaml; print(yaml.safe_load(open('config.yaml')))"
 
 ---
 
-### 22. 状态文件损坏
+### 23. 状态文件损坏
 
 **错误信息**：
 ```
@@ -628,7 +811,7 @@ python cli.py reset --project-name "项目名"
 
 ---
 
-### 23. 多项目记忆混淆
+### 24. 多项目记忆混淆
 
 **问题**：切换项目后使用了错误的记忆。
 
@@ -654,7 +837,7 @@ python cli.py run --project-name "项目B" ...
 
 ---
 
-### 24. 自定义 Prompt 不生效
+### 25. 自定义 Prompt 不生效
 
 **问题**：修改 prompts.py 后没有效果。
 
@@ -720,4 +903,4 @@ python cli.py show --project-name "项目名" --all > debug.log
 
 ---
 
-**最后更新**：2026-04-03
+**最后更新**：2026-04-08

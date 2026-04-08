@@ -859,7 +859,12 @@ xdg-open htmlcov/index.html  # Linux
 | [docs/10-best-practices.md](docs/10-best-practices.md) | 最佳实践指南 |
 | [docs/11-contributing.md](docs/11-contributing.md) | 贡献指南 |
 
-**版本**: 0.5.0
+**版本**: 0.5.1
+
+**v0.5.1 修复**:
+- 修复命令行参数 `--max-rounds` 无法覆盖配置文件的问题
+- 添加 `LoopQueue.set_max_rounds()` 方法支持动态修改最大轮次
+- 改进参数传递逻辑，确保命令行参数优先级高于配置文件
 
 **v0.5.0 新功能**:
 - 结构化会话记忆（session.md）：10 个结构化 section

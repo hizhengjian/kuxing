@@ -487,4 +487,8 @@ tasks:
 
 - [配置指南](./05-config-guide.md) - YAML 配置详解
 - [调度器架构](./06-scheduler-architecture.md) - 内部工作原理
+
+---
+
+**最后更新**：2026-04-08
 - [记忆架构](./07-memory-architecture.md) - 记忆系统详解
