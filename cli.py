@@ -494,61 +494,65 @@ def cmd_create_task(args):
     project_name = args.project_name
 
     print(f"🤖 创建任务: {project_name}")
-    print("=" * 50)
+    print("=" * 60)
 
-    # 收集信息
-    code_paths = []
-    print("\n📂 代码路径（每行一个，输入空行结束）:")
+    # ========== 第1步：项目路径 ==========
+    print("\n" + "=" * 60)
+    print("📂 第1步：项目路径")
+    print("=" * 60)
+    print("输入项目根目录路径（用于代码分析）:")
+    project_path = robust_input("  路径: ").strip()
+
+    # ========== 第2步：项目私有记忆 ==========
+    print("\n" + "=" * 60)
+    print("📝 第2步：项目私有记忆")
+    print("=" * 60)
+    print("直接输入任意内容，写入到【项目记忆】")
+    print("可以写：网址、账号、备注、项目结构等任何内容")
+    print("输入空行结束输入：")
+    print("-" * 40)
+
+    project_notes = []
     while True:
-        path = robust_input("  路径: ").strip()
-        if not path:
+        line = robust_input("")
+        if not line.strip():
             break
-        code_paths.append(path)
+        project_notes.append(line)
 
-    doc_paths = []
-    print("\n📄 文档路径（每行一个，输入空行结束）:")
+    # ========== 第3步：全局共享记忆 ==========
+    print("\n" + "=" * 60)
+    print("🌐 第3步：全局共享记忆")
+    print("=" * 60)
+    print("直接输入任意内容，写入到【全局共享记忆】")
+    print("所有项目共享，可写：通用账号、Token、服务器地址等")
+    print("输入空行结束输入：")
+    print("-" * 40)
+
+    global_notes = []
     while True:
-        path = robust_input("  路径: ").strip()
-        if not path:
+        line = robust_input("")
+        if not line.strip():
             break
-        doc_paths.append(path)
+        global_notes.append(line)
 
-    description = robust_input("\n📝 项目描述（可选）: ").strip()
-
-    # 账号信息
-    has_credentials = robust_input("\n🔐 是否需要保存账号信息？(y/n): ").lower() == 'y'
-    credentials = []
-    if has_credentials:
-        print("账号信息（格式：服务名 账号 密码，每行一个，输入空行结束）:")
-        while True:
-            cred = robust_input("  ").strip()
-            if not cred:
-                break
-            credentials.append(cred)
-
-    # 偏好设置
-    preferences = []
-    has_preferences = robust_input("\n⚙️  是否需要保存偏好设置？(y/n): ").lower() == 'y'
-    if has_preferences:
-        print("偏好设置（每行一个，输入空行结束）:")
-        while True:
-            pref = robust_input("  ").strip()
-            if not pref:
-                break
-            preferences.append(pref)
-
-    # 任务配置
-    max_rounds_input = robust_input("\n🔄 最大轮次（默认50）: ").strip()
+    # ========== 第4步：任务配置 ==========
+    print("\n" + "=" * 60)
+    print("⚙️  第4步：任务配置")
+    print("=" * 60)
+    max_rounds_input = robust_input("最大轮次（默认50）: ").strip()
     max_rounds = int(max_rounds_input) if max_rounds_input else 50
 
-    print("\n🔄 正在生成配置和记忆文件...")
+    # ========== 生成文件 ==========
+    print("\n" + "=" * 60)
+    print("🔄 正在生成配置和记忆文件...")
+    print("=" * 60)
 
-    # 生成配置文件
     project_slug = project_name.lower().replace(' ', '-').replace('_', '-')
 
+    # 生成配置文件
     config = {
         'project_name': project_name,
-        'project_path': code_paths[0] if code_paths else '.',
+        'project_path': project_path or '.',
         'mode': 'loop',
         'tasks': [
             {
@@ -569,87 +573,97 @@ def cmd_create_task(args):
     with open(config_file, 'w', encoding='utf-8') as f:
         yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
 
-    print(f"\n✅ 已生成配置: {config_file}")
-
-    # 生成项目记忆
-    project_context = f"""# {project_name} 项目记忆
-
-## 代码路径
-"""
-    if code_paths:
-        project_context += "\n".join(f"- {p}" for p in code_paths)
-    else:
-        project_context += "- （暂无）"
-
-    project_context += "\n\n## 文档路径\n"
-    if doc_paths:
-        project_context += "\n".join(f"- {p}" for p in doc_paths)
-    else:
-        project_context += "- （暂无）"
-
-    if description:
-        project_context += f"\n\n## 项目描述\n{description}\n"
-
-    project_context += f"\n\n## 创建时间\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-
     memory_store = MemoryStore(str(base_path), project_slug)
     memory_store.ensure_dirs()
 
+    # 保存项目记忆
     project_context_file = memory_store.memory_dir / "context.md"
     project_context_file.parent.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    project_context = f"""# {project_name} 项目记忆
+
+## 创建时间
+{timestamp}
+
+## 项目路径
+{project_path or '(未指定)'}
+
+## 自由笔记
+"""
+    if project_notes:
+        project_context += "\n".join(f"- {note}" for note in project_notes)
+    else:
+        project_context += "- （暂无）"
+
     project_context_file.write_text(project_context, encoding='utf-8')
 
-    print(f"✅ 已生成项目记忆: {project_context_file}")
+    # 保存全局共享记忆
+    shared_context_file = memory_store.shared_context_file
+    shared_context_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # 生成全局记忆
-    if credentials or preferences:
-        shared_context = """# 全局共享记忆
-
-## 账号配置
-"""
-        if credentials:
-            shared_context += "\n".join(f"- {c}" for c in credentials)
-        else:
-            shared_context += "- （暂无）"
-
-        shared_context += "\n\n## 用户偏好\n"
-        if preferences:
-            shared_context += "\n".join(f"- {p}" for p in preferences)
-        else:
-            shared_context += "- （暂无）"
-
-        shared_context += f"\n\n## 创建时间\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-
-        shared_context_file = memory_store.shared_context_file
-        shared_context_file.parent.mkdir(parents=True, exist_ok=True)
-
+    if global_notes:
         # 如果文件已存在，追加
         if shared_context_file.exists():
             existing = shared_context_file.read_text(encoding='utf-8')
-            shared_context = existing + "\n\n---\n\n" + shared_context
+            header = f"\n\n---\n\n# 全局共享记忆 - {project_name}\n\n## 创建时间\n{timestamp}\n\n## 自由笔记\n"
+            content = header + "\n".join(f"- {note}" for note in global_notes)
+            shared_context = existing + content
+        else:
+            shared_context = f"""# 全局共享记忆
 
+## 创建时间
+{timestamp}
+
+## 自由笔记
+"""
+            shared_context += "\n".join(f"- {note}" for note in global_notes)
         shared_context_file.write_text(shared_context, encoding='utf-8')
-        print(f"✅ 已生成全局记忆: {shared_context_file}")
 
-    # 初始化项目记忆（v0.5.0 新增：自动创建 session.md 和 MEMORY.md）
-    print(f"\n🔄 初始化项目记忆...")
+    # 初始化其他记忆文件
     try:
         init_args = type('obj', (object,), {'config': str(config_file)})()
         cmd_init(init_args)
-        print(f"✅ 项目记忆已初始化")
-        print(f"   - MEMORY.md: 记忆索引")
-        print(f"   - session.md: 会话记忆（10个结构化 section）")
     except Exception as e:
         print(f"⚠️  初始化记忆失败: {e}")
-        print(f"   可以稍后手动运行: python cli.py init --config {config_file}")
 
-    # 显示运行命令
-    print(f"\n🚀 可以运行了：")
-    print(f"   python cli.py --config {config_file} run")
-    print(f"\n💡 提示：")
-    print(f"   - 可以手动编辑 {project_context_file} 追加项目信息")
-    if credentials or preferences:
-        print(f"   - 可以手动编辑 {shared_context_file} 追加全局信息")
+    # ========== 输出报告 ==========
+    print("\n" + "=" * 60)
+    print("📋 创建完成报告")
+    print("=" * 60)
+
+    print(f"""
+✅ 任务创建成功！
+
+📁 配置文件：
+   {config_file}
+
+📝 项目记忆（仅本项目使用）：
+   {project_context_file}
+   内容预览：
+{project_context[:300]}...
+
+🌐 全局共享记忆（所有项目共享）：
+   {shared_context_file}
+   本次追加内容：
+{chr(10).join(f'  - {n}' for n in global_notes) if global_notes else '  （本次未输入）'}
+
+📚 其他记忆文件（自动创建）：
+   {memory_store.memory_dir / 'MEMORY.md'}  - 记忆索引
+   {memory_store.memory_dir / 'session.md'} - 会话记忆
+   {memory_store.memory_dir / 'state.json'}  - 调度器状态
+
+🚀 运行命令：
+   python cli.py --config {config_file} run
+
+💡 后续追加信息：
+   • 编辑项目记忆：
+     vim {project_context_file}
+   • 编辑全局共享记忆：
+     vim {shared_context_file}
+   • 查看记忆目录：
+     ls {memory_store.memory_dir}
+""")
 
     return 0
 

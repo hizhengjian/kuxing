@@ -33,3 +33,6 @@ env/
 
 # 日志文件
 *.log
+
+# 工作任务配置（机器特定）
+examples/claude-code-doc-update.yaml
